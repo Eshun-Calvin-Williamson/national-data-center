@@ -1,0 +1,35 @@
+<%- include("../partials/header.ejs") %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/styles/home.css">
+  <title>GAEC</title>
+</head>
+<body>
+  <div class="home">
+    <div class="home-content">
+  <div class="form-container">
+    <form action="/submit" method="post" class="styled-form">
+      <h2>LOGIN</h2>
+      <label for="id">ID</label>
+      <input type="id" name="is" id="is" required>
+      <label for="email">EMAIL</label>
+      <input type="email" name="email" id="email" placeholder="Enter valid email">
+      <label for="password">PASSCODE</label>
+      <input type="password" name="password" id="pass" placeholder="Enter Password">
+      
+      <div class="checkbox-container">
+        <input type="checkbox" name="checkbox" id="check" required>
+        <br><br>
+        <label for="checkbox">Check to agree to terms</label>
+      </div>
+      <button type="submit">SUBMIT</button>
+    </form>
+  </div>
+  </div>
+</div>
+</body>
+</html>
+<%- include("../partials/footer.ejs") %>

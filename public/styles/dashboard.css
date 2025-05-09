@@ -1,0 +1,350 @@
+h5{
+  color: white;
+  margin:10px 20px 10px;
+}
+body{
+  margin: 0;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+body, h1, h2, h3, p, ul, li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.main-dashboard{
+  position: relative;
+  width: 100%;
+  height: 110vh;
+  overflow: hidden;
+}
+/* 
+.main-dashboard::before{
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/gaec.jpg');
+  filter: blur(84px);
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+} */
+
+.dh-menu{
+  z-index: 2;
+  position: relative;
+  float: left;
+  width: 25%;
+  height: 110vh;
+  background-color: #007bff;
+  color: white;
+  
+}
+
+.dh-menu>div >a{
+  position: relative;
+  display: flex;
+  top: 150px;
+  flex: 1;
+  margin: 40px;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  color: white;
+  font-size: large;
+  font-weight: bold;
+}
+.dh-menu a {
+  width: 50%;
+  border-radius: 20px;
+  color: white;
+  text-decoration: none;
+  display: block;
+  padding: 20px;
+  margin: 5px 0;
+  border: 1px solid #007bff;
+  background-color: rgba(226, 9, 9, 0.897);
+  transition: background-color 0.5s ease;
+}
+.dh-menu a:hover {
+  background-color: lightblue;
+  border-radius: 40px;
+}
+
+.dh-nav-content{
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  margin-left: 5px;
+}
+
+
+.dh-nav-content .dh-nav{
+  height: 6rem;
+  background-color: #007bff;
+}
+
+.dh-nav{
+  width: 100%;
+  display: flex;
+  justify-content: end;
+  text-align: center;
+
+}
+
+.dh-nav >a{
+  color: white;
+  height: 30px;
+  font-size: medium;
+  margin:30px 30px 10px;
+}
+.dh-nav a:hover{
+  color: #ff5e00;
+  cursor: pointer;
+}
+
+.dh-nav-content .dh-content{
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 12rem 12rem;
+}
+
+
+.dh-nav .profile{
+  display: flex;
+  justify-content: end;
+  align-items: center;
+}
+
+.profile >img{
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  /* display: flex; */
+  /* justify-content: center; */
+  /* align-items: center; */
+  filter: blur(0.5px);
+  margin: 10px;
+}
+
+.event-grid{
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  grid-template-rows: repeat(1,3fr);
+  grid-auto-rows: 300px; 
+  gap: 55px;
+  margin-bottom: 35rem;
+}
+
+.event-grid .grid-in{
+  height: 11rem;
+  width: 15vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  background-color: rgba(226, 9, 9, 0.527);
+  border: none;
+  color: hsl(0, 4%, 5%);
+  border-radius: 20px 10px;
+}
+.event-grid .grid-in:hover{
+  cursor: pointer;
+  background-color: lightblue;
+}
+
+a{
+  text-decoration: none;
+  font-size: x-large;
+}
+
+li{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 40px;
+  cursor: pointer;
+}
+
+
+
+.user-pro-grh{
+  display: flex;
+  flex-direction: column;
+  /* width: 100vw; */
+  /* height: 50vh; */
+  /* background-color: brown; */
+  /* justify-content: center; */
+  align-items: center;
+  gap: 1rem;
+}
+.user{
+  float: left;
+  width: 30vw;
+  justify-content: center;
+}
+.user >img{
+  width:250px;
+  height:250px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.graph{
+text-align: center;
+}
+
+.dh-nav-content > .dh-nav > .profile>img,h3{
+  position: relative;
+}
+
+.main-dashboard >.user-pro-grh > .user >img{
+  width: 40px;
+}
+
+
+/* user.ejs styling */
+
+.user-form{
+  height: 60vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.styled-form h2 {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #007bff;
+}
+
+.styled-form label {
+  display: block;
+  text-align: left;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.styled-form input[type="email"],
+.styled-form input[type="password"],
+.styled-form input[type="id"],
+.styled-form input[type="name"] {
+  width: 120%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #007bff4b;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.styled-form ::placeholder{
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-size: 17px;
+  text-align: center;
+}
+
+.styled-form button {
+  width: 50%;
+  padding: 10px;
+  margin-left: 40%;
+  background-color: #007bff;
+  font-size: x-large;
+  font-weight: bolder;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.5s ease;
+}
+
+.styled-form button:hover {
+  background-color: hsl(195, 78%, 60%);
+  
+}
+
+/* add data.ejs file styling*/
+
+.event-form{
+  width: 98%;
+  height: 30%;
+  overflow-x: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+
+.event-form >button{
+  width: 150px;
+  height: 50px;
+  border: none;
+  border-radius: 10px;
+  margin:10px 10px;
+  background-color: #007bff;
+  font-weight: bold;
+}
+
+.event-form >button:hover{
+  background-color: hsl(195, 78%, 60%);
+  cursor: pointer;
+  transition: background-color 0.5s ease;
+}
+
+
+
+/* manage-data.ejs */
+.manage-data{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 90px;
+}
+.manage-data >input{
+  width: 600px;
+  height: 40px;
+  text-align: center;
+  font-style: italic;
+  font-weight: bold;
+  border:1px solid  #007bff4b ;
+  border-radius: 12px;
+}
+
+.manage-data >button{
+  width: 100px;
+  height: 40px;
+  margin-left: 14px;
+  border: 1px solid #007bff4b;
+  border-radius: 12px;
+  background-color: #007bff;
+  font-size: large;
+}
+
+.manage-data >button:hover{
+  background-color: lightblue;
+  cursor: pointer;
+  }
+
+  .delete-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .delete-btn:hover {
+    background-color: #c0392b;
+  }
+
+

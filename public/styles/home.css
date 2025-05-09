@@ -1,0 +1,136 @@
+/* General Styles */
+body {
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+
+}
+.home{
+  position: relative;
+  height: 70vh;
+  overflow: hidden;
+}
+
+.home::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/bg-image.jpg'); /* Path to your image */
+  background-size: cover;
+  background-position: center;
+  filter: blur(4px);
+  z-index: 1; /* Place the blur behind content */
+}
+
+.home-content {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2; /* Bring content above the blur */
+  background-color: rgba(0, 0, 0, 0.5); /* Optional translucent backdrop */
+  color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+/* Form Container */
+.form-container {
+  position: absolute;
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px 30px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  color: #333;
+
+}
+
+/* Form Header */
+.styled-form h2 {
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #007bff;
+}
+
+/* Form Labels */
+.styled-form label {
+  display: block;
+  text-align: left;
+  margin-bottom: 5px;
+  font-size: larger;
+}
+
+/* Form Inputs */
+.styled-form input[type="email"],
+.styled-form input[type="password"],
+.styled-form input[type ="id"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #007bff4b;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.styled-form ::placeholder{
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-size: 17px;
+  text-align: center;
+}
+
+/* Checkbox Container */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  font-weight: lighter;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.styled-form input[type="checkbox"] {
+  width: 19px;
+  height: 16px;
+}
+
+/* Submit Button */
+.styled-form button {
+  width: 30%;
+  padding: 10px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.5s ease;
+}
+
+.styled-form button:hover {
+  background-color: hsl(195, 78%, 60%);
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .form-container {
+    padding: 15px 20px;
+  }
+
+  .styled-form h2 {
+    font-size: 20px;
+  }
+}

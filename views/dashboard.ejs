@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NDC-GAEC-dashboard</title>
+  <link rel="stylesheet" href="/styles/dashboard.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+</head>
+<body>
+  <div class="main-dashboard">
+    <div class="dh-menu">
+      <div>
+        <a href="/dashboard">DASHBOARD</a>
+        <a href="/user">MANAGE USER</a>
+        <a href="/add">ADD DATA</a>
+        <a href="/manage-data">MANAGE DATA</a>
+        <a href="/activities">USER ACTIVITIES</a>
+      </div>
+     
+    </div>
+    <div class="dh-nav-content">
+      <div class="dh-nav">
+          <div class="profile">
+            <img src="<%= users.image %>" alt="">
+            <h5>Welcome, <%= users.user_name%></h5>
+        </div>
+      </div>
+      <div class="user-pro-grh">
+        <div class="user">
+        <img src="<%= users.image %>" alt="">
+        </div>
+        <div class="graph">
+         <p>Email  :   <%= users.email %></p>
+         <p> ID Number : <%= users.id %></p>
+        </div>
+      </div>
+      <div class="dh-content">
+        <div class="event-grid">
+          <div class="grid-in">
+            <div>
+              <p>ACTIVE MEMBERS</p>
+              <li><%= users.usersResults %></li>
+            </div>
+            <div><i class="fa-solid fa-users-gear"></i></div>
+          </div>
+          <div class="grid-in">
+            <div>
+              <p>NSS PERSONAL</p>
+              <li><%= metrics.nssPersonnel %></li>
+            </div>
+            <div><i class="fa-solid fa-users-gear"></i></div>
+          </div>
+          <div class="grid-in">
+            <div>
+              <p>STAFF MEMBERS</p>
+              <li><%= metrics.staffMembers %></li>
+            </div>
+            <div>
+              <i class="fa-solid fa-users-gear"></i>
+            </div>
+          </div>
+          <div class="grid-in">
+            <div>
+              <p>TOTAL MEMBERS</p>
+              <li><%= metrics.totalMembers %></li>
+            </div>
+            <div><i class="fa-solid fa-users-gear"></i></div>
+          </div>
+          <div class="grid-in">
+            <div>
+              <a href="https://www.ctbto.org/">CTBTO</a>
+            </div>
+            <div><i class="fa-solid fa-right-left"></i></div>
+          </div>
+          <div class="grid-in">
+            <div>
+              <a href="https://gaec.gov.gh/">GAEC</a>
+            </div>
+            <div><i class="fa-solid fa-arrow-left"></i></div>
+          </div>
+          <div class="grid-in">
+            <div>
+              <a href="/">HOME PAGE</a>
+            </div>
+            <div><i class="fa-solid fa-arrow-left"></i></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>
