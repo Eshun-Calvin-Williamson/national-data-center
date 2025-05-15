@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Full-Screen Map with Search</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Leaflet Geocoder CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    #coords {
+      position: absolute;
+      bottom: 20px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="coords">Click on the map to get coordinates</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- Leaflet Geocoder JS -->
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<script>
+  const map = L.map('map').setView([0, 0], 2);
+
+  // Add OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Add Geocoder Search
+  const geocoder = L.Control.geocoder({
+    defaultMarkGeocode: false
+  })
+  .on('markgeocode', function(e) {
+    const bbox = e.geocode.bbox;
+    const center = e.geocode.center;
+
+    map.fitBounds(bbox);
+
+    if (marker) {
+      marker.setLatLng(center);
+    } else {
+      marker = L.marker(center).addTo(map);
+    }
+
+    document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}`;
+  })
+  .addTo(map);
+
+  let marker;
+
+  // Handle map click to show coordinates
+  map.on('click', function(e) {
+    const { lat, lng } = e.latlng;
+    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
+
+    if (marker) {
+      marker.setLatLng(e.latlng);
+    } else {
+      marker = L.marker(e.latlng).addTo(map);
+    }
+  });
+</script>
+
+</body>
+</html>

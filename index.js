@@ -140,6 +140,11 @@ app.get('/activities',(req,res)=>{
 //   res.render('dashboard.ejs')
 // })
 
+// map route 
+app.get('/map',(req,res)=>{
+  res.render('map')
+})
+
 
 // password authentication
 app.get('/submit',(rea,res)=>{
