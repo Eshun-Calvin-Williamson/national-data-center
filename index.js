@@ -10,6 +10,9 @@ import multer from 'multer';
 import { Parser } from 'json2csv';
 // to download in excel format
 import ExcelJS from 'exceljs';
+import session from 'express-session';
+import dotenv from 'dotenv';
+dotenv.config()
   
 
 import { name } from 'ejs';
@@ -20,11 +23,11 @@ import { name } from 'ejs';
 // connect database
 const db= new pg.Client(
   {
-    user:"postgres",
-    localhost: "localhost",
+    user:process.env.DB_USER,
+    localhost: process.env.DB_HOST,
     database: "ndc ",
-    password: "Coolhand-85",
-    port: 5432,
+    password: process.env.DB_PASSWORD,
+    port: process.env.BD_PORT,
   }
 )
 
@@ -40,6 +43,11 @@ app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, "public")));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use(session({
+  secret:process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+}));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -66,11 +74,12 @@ const passcode =async (req,res,next)=>{
 
 
 try {
-    const results =await db.query(`SELECT id, user_name, email, image, password FROM users WHERE email = $1`,[email])
+    const results =await db.query(`SELECT id, user_name, email, image, password,role FROM users WHERE email = $1`,[email])
     const users =results.rows[0];
     
     if(users){
       if(password === users.password){
+        req.session.user =users;
         req.users =users;
         validUSer =true;
       }else{
@@ -90,6 +99,15 @@ try {
 }
 };
 
+const requireAdmin =(req, res, next)=> {
+  if (req.users && req.users.role === 'admin') {
+    return next();
+  } else {
+    return res.status(403).send('Access denied: Admins only.');
+  }
+}
+
+
 
 app.get('/logout',(req,res)=>{
   res.render('home.ejs')
@@ -100,11 +118,13 @@ app.get('/',(req,res)=>{
 })
 
 app.get('/user',(req,res)=>{
-  res.render('user.ejs')
+if(req.session.user?.role !== 'admin'){
+  return res.status(403).send('Access denied')
+}
+  res.render('user.ejs',{ user: req.session.user})
 })
 
 app.get('/add',(req,res)=>{
-
   res.render('add.ejs')
 })
 
@@ -156,15 +176,15 @@ app.post('/submit',passcode,async (req,res)=>{
 })
 
 
-app.post('/add',upload.single('photo'),async (req,res)=>{
-  const {id,password,email,name} =req.body;
+app.post('/add',upload.single('photo'), async (req,res)=>{
+  const {id,password,email,name,role} =req.body;
   const image = req.file ? `/uploads/${req.file.filename}`: null;
 
   try {
-    await db.query(`INSERT INTO users (id,password,email,image,user_name)
+    await db.query(`INSERT INTO users (id,password,email,image,user_name,role)
        VALUES
-       ($1,$2,$3,$4,$5)`
-       ,[id,password,email,image,name]);
+       ($1,$2,$3,$4,$5,$6)`
+       ,[id,password,email,image,name,role]);
     res.render('home.ejs')
   } catch (err) {
     console.error('Error inserting data',err);

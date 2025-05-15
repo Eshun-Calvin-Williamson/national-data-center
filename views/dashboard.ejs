@@ -13,10 +13,21 @@
     <div class="dh-menu">
       <div>
         <a href="/dashboard">DASHBOARD</a>
-        <a href="/user">MANAGE USER</a>
+        <!-- <a href="/user">MANAGE USER</a> -->
+
+        <% if (users && users.role === 'admin') { %>
+          <a href="/user">MANAGE USER</a>
+        <% } %>
+
         <a href="/add">ADD DATA</a>
+
         <a href="/manage-data">MANAGE DATA</a>
-        <a href="/activities">USER ACTIVITIES</a>
+        
+        <% if (users && users.role === 'admin') { %>
+          <a href="/activities">USER ACTIVITIES</a>
+        <% } %>
+
+        <!-- <a href="/activities">USER ACTIVITIES</a> -->
       </div>
      
     </div>
