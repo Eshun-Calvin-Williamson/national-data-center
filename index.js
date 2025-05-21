@@ -47,6 +47,7 @@ app.use(session({
   secret:process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
+  cookie: {secure:false}
 }));
 
 const storage = multer.diskStorage({
@@ -99,6 +100,16 @@ try {
 }
 };
 
+
+function isAuthenticated(req, res, next) {
+  if (req.session.user) {
+    return next();
+  }
+  res.redirect('/');
+}
+
+
+
 const requireAdmin =(req, res, next)=> {
   if (req.users && req.users.role === 'admin') {
     return next();
@@ -110,6 +121,12 @@ const requireAdmin =(req, res, next)=> {
 
 
 app.get('/logout',(req,res)=>{
+  req.session.destroy(err =>{
+    if(err){
+      return res.status(500).send('Could not log out')
+    }
+    
+  })
   res.render('home.ejs')
 })
 
@@ -117,14 +134,14 @@ app.get('/',(req,res)=>{
   res.render('home.ejs')
 })
 
-app.get('/user',(req,res)=>{
+app.get('/user',isAuthenticated ,(req,res)=>{
 if(req.session.user?.role !== 'admin'){
   return res.status(403).send('Access denied')
 }
   res.render('user.ejs',{ user: req.session.user})
 })
 
-app.get('/add',(req,res)=>{
+app.get('/add', isAuthenticated, (req,res)=>{
   res.render('add.ejs')
 })
 
@@ -132,7 +149,7 @@ app.get('/add',(req,res)=>{
 //   res.render('manage-data.ejs')
 // })
 
-app.get('/activities',(req,res)=>{
+app.get('/activities', isAuthenticated, (req,res)=>{
   res.render('activities.ejs')
 })
 
@@ -147,11 +164,11 @@ app.get('/map',(req,res)=>{
 
 
 // password authentication
-app.get('/submit',(rea,res)=>{
+app.get('/submit',isAuthenticated, (req,res)=>{
   res.render('dashbaord.ejs')
 })
 
-app.post('/submit',passcode,async (req,res)=>{
+app.post('/submit',passcode, isAuthenticated, async (req,res)=>{
   try {
     const userResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE email = $1', ['active']);
     const nssResults = await db.query('SELECT COUNT(*) AS count FROM users');
@@ -181,7 +198,7 @@ app.post('/submit',passcode,async (req,res)=>{
 })
 
 
-app.post('/add',upload.single('photo'), async (req,res)=>{
+app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
   const {id,password,email,name,role} =req.body;
   const image = req.file ? `/uploads/${req.file.filename}`: null;
 
@@ -316,7 +333,7 @@ app.post('/events', async (req, res) => {
 
 
 
-app.get('/manage-data',async (req,res)=>{
+app.get('/manage-data',isAuthenticated, async (req,res)=>{
   try {
     const results =await db.query(`SELECT * FROM data`);
     console.log('Fetched events:', results.rows);
@@ -353,7 +370,7 @@ app.get('/search',async (req,res)=>{
 });
 
 
-app.get('/dashboard', async (req, res) => {
+app.get('/dashboard',isAuthenticated, async (req, res) => {
   try {
     const userResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE email = $1', ['active']);
     const nssResults = await db.query('SELECT COUNT(*) AS count FROM users');
