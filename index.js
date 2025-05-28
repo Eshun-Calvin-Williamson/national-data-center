@@ -70,6 +70,20 @@ db.connect((err)=>{
   }
 });
 
+
+async function logActivity(user, action, details = '') {
+  try {
+    await db.query(
+      `INSERT INTO activity_logs (user_id, user_email, action, details)
+       VALUES ($1, $2, $3, $4)`,
+      [user?.id || 'guest', user?.email || 'unknown', action, details]
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+}
+
+
 const passcode =async (req,res,next)=>{
   const {id,password,email} =req.body;
 
@@ -83,12 +97,14 @@ try {
         req.session.user =users;
         req.users =users;
         validUSer =true;
+        await logActivity(users, 'Login', 'User logged in successfully');
       }else{
         validUSer =false
       }
     }
     else{
-      validUSer =false
+      validUSer =false;
+      await logActivity(null, 'Failed Login', `Attempted login for ${email}`);
     }
     if(!validUSer){
      return res.send('login failed pleace check creditails');
@@ -111,16 +127,17 @@ function isAuthenticated(req, res, next) {
 
 
 const requireAdmin =(req, res, next)=> {
-  if (req.users && req.users.role === 'admin') {
+  if (req.session.user && req.session.user.role === 'admin') {
     return next();
   } else {
-    return res.status(403).send('Access denied: Admins only.');
+    return res.status(403).send('Access denied: ADMINS ONLY.');
   }
 }
 
 
 
-app.get('/logout',(req,res)=>{
+app.get('/logout', async (req,res)=>{
+  if (req.session.user) await logActivity(req.session.user, 'Logout', 'User logged out');
   req.session.destroy(err =>{
     if(err){
       return res.status(500).send('Could not log out')
@@ -149,9 +166,20 @@ app.get('/add', isAuthenticated, (req,res)=>{
 //   res.render('manage-data.ejs')
 // })
 
-app.get('/activities', isAuthenticated, (req,res)=>{
-  res.render('activities.ejs')
-})
+// app.get('/activities', isAuthenticated, (req,res)=>{
+//   res.render('activities.ejs')
+// })
+
+app.get('/activities', isAuthenticated, requireAdmin, async (req, res) => {
+  try {
+    const logs = await db.query('SELECT * FROM activity_logs ORDER BY timestamp DESC');
+    res.render('activities.ejs', { logs: logs.rows });
+  } catch (err) {
+    console.error('Error fetching activity logs:', err);
+    res.status(500).send('Error fetching logs');
+  }
+});
+
 
 // app.get('/dashboard',(req,res)=>{
 //   res.render('dashboard.ejs')
@@ -184,6 +212,9 @@ app.post('/submit',passcode, isAuthenticated, async (req,res)=>{
       staffMembers: staffResults.rows[0].count,
       totalMembers: totalResults.rows[0].count,
     };
+
+    await logActivity(req.session.user, 'View Dashboard', 'User accessed dashboard');
+
     res.render('dashboard.ejs',{ metrics, users: req.users})
 
   } catch (err) {
@@ -207,6 +238,9 @@ app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
        VALUES
        ($1,$2,$3,$4,$5,$6)`
        ,[id,password,email,image,name,role]);
+
+       await logActivity(req.session.user, 'Create User', `User ${email} added`);
+
     res.render('home.ejs')
   } catch (err) {
     console.error('Error inserting data',err);
@@ -324,6 +358,9 @@ app.post('/events', async (req, res) => {
       nearest_location
     ]);
 
+    await logActivity(req.session.user, 'Add/Update Event', `Event ${id} added or updated`);
+
+
     res.redirect('/add');
   } catch (err) {
     console.error('Error inserting or updating event data:', err);
@@ -384,6 +421,9 @@ app.get('/dashboard',isAuthenticated, async (req, res) => {
       totalMembers: totalResults.rows[0].count,
     };
 
+    await logActivity(req.session.user, 'Access Dashboard', 'User accessed dashboard');
+
+
     const usersResults = await db.query('SELECT id, email, image,user_name FROM users');
 
 
@@ -428,6 +468,9 @@ app.delete('/data/:id', async (req, res) => {
   const { id } = req.params;
   try {
     await db.query('DELETE FROM data WHERE id = $1', [id]);
+
+    await logActivity(req.session.user, 'Delete Event', `Event ${id} deleted`);
+
     res.redirect('/manage-data');
   } catch (err) {
     console.error('Error deleting data:', err);
@@ -450,6 +493,9 @@ app.get('/download', async (req, res) => {
     const opts = { fields };
     const parser = new Parser(opts);
     const csv = parser.parse(rows);
+
+    await logActivity(req.session.user, 'Download CSV', 'User downloaded data in CSV');
+
 
     res.header('Content-Type', 'text/csv');
     res.attachment('data_export.csv');
@@ -484,6 +530,9 @@ app.get('/download-excel', async (req, res) => {
     rows.forEach(row => {
       worksheet.addRow(row);
     });
+
+    await logActivity(req.session.user, 'Download Excel', 'User downloaded data in Excel');
+
 
     res.setHeader(
       'Content-Type',

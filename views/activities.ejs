@@ -15,16 +15,38 @@
         <a href="/add">Add Data</a>
         <a href="/manage-data">Manage Data</a>
         <a href="/activities">User Activites</a>
+        <a href="/map">MAP</a>
+        <a href="/logout">LOGOUT</a>
       </div>
      
     </div>
     <div class="dh-nav-content">
       <div class="dh-nav">
-        <div class="profile">
-          <img src="" alt="profile user">
-        </div>
       </div>
-
+      <h2>User Activity Logs</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Email</th>
+            <th>Action</th>
+            <th>Details</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% logs.forEach(log => { %>
+            <tr>
+              <td><%= log.user_id %></td>
+              <td><%= log.user_email %></td>
+              <td><%= log.action %></td>
+              <td><%= log.details %></td>
+              <td><%= log.timestamp %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      
         </div>
       </div>
     </div>

@@ -19,6 +19,7 @@
       <input type="email" name="email" id="email" placeholder="Enter valid email">
       <label for="password">PASSCODE</label>
       <input type="password" name="password" id="pass" placeholder="Enter Password">
+      <input type="checkbox" onclick="myFunction()" >Show Password
       
       <div class="checkbox-container">
         <input type="checkbox" name="checkbox" id="check" required>
@@ -32,4 +33,15 @@
 </div>
 </body>
 </html>
+
+<script>
+  function myFunction() {
+  var x = document.getElementById("pass");
+  if (x.type === "password") {
+    x.type = "text";
+  } else {
+    x.type = "password";
+  }
+}
+</script>
 <%- include("partials/footer.ejs") %>
