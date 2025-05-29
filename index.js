@@ -107,7 +107,7 @@ try {
       await logActivity(null, 'Failed Login', `Attempted login for ${email}`);
     }
     if(!validUSer){
-     return res.send('login failed pleace check creditails');
+      return res.redirect('/?error=Login failed, please check your credentials');
     }
     next();
 } catch (err) {
@@ -144,12 +144,18 @@ app.get('/logout', async (req,res)=>{
     }
     
   })
-  res.render('home.ejs')
-})
+  res.redirect('/?success=You have been logged out successfully');
+  })
 
-app.get('/',(req,res)=>{
-  res.render('home.ejs')
-})
+
+app.get('/', (req, res) => {
+  const success = req.query.success || null;
+  const error = req.query.error || null;
+
+  res.render('home', { success, error });
+});
+
+
 
 app.get('/user',isAuthenticated ,(req,res)=>{
 if(req.session.user?.role !== 'admin'){
@@ -241,8 +247,8 @@ app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
 
        await logActivity(req.session.user, 'Create User', `User ${email} added`);
 
-    res.render('home.ejs')
-  } catch (err) {
+       res.redirect('/?success=User added successfully');
+      } catch (err) {
     console.error('Error inserting data',err);
     res.status(500).send('error saving data');
   }
@@ -471,7 +477,7 @@ app.delete('/data/:id', async (req, res) => {
 
     await logActivity(req.session.user, 'Delete Event', `Event ${id} deleted`);
 
-    res.redirect('/manage-data');
+    res.redirect('/manage-data?success=Event deleted successfully');
   } catch (err) {
     console.error('Error deleting data:', err);
     res.status(500).send('Error deleting data');

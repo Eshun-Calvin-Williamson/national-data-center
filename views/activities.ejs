@@ -9,20 +9,19 @@
 <body>
   <div class="main-dashboard">
     <div class="dh-menu">
-      <div>
-        <a href="/dashboard">Dashboard</a>
+      <div class="menu-links">
         <a href="/user">Manage User</a>
         <a href="/add">Add Data</a>
         <a href="/manage-data">Manage Data</a>
-        <a href="/activities">User Activites</a>
-        <a href="/map">MAP</a>
-        <a href="/logout">LOGOUT</a>
+        <a href="/activities">User Activities</a>
+        <a href="/map">Map</a>
+        <a href="/logout">Logout</a>
       </div>
-     
     </div>
     <div class="dh-nav-content">
       <div class="dh-nav">
       </div>
+      <div class="atv-tb" id="atv">
       <h2>User Activity Logs</h2>
       <table>
         <thead>
@@ -46,6 +45,7 @@
           <% }) %>
         </tbody>
       </table>
+      </div>
       
         </div>
       </div>
@@ -53,3 +53,8 @@
   </div>
 </body>
 </html>
+
+<script>
+  const Scroll = document.getElementById('atv');
+  Scroll.scrollTop = Scroll.scrollHeight;
+</script>

@@ -10,9 +10,9 @@
 </head>
 <body>
   <div class="main-dashboard">
-    <div class="dh-menu">
+    <!-- <div class="dh-menu">
       <div>
-        <!-- <a href="/dashboard">DASHBOARD</a> -->
+        <a href="/dashboard">DASHBOARD</a>
 
         <% if (users && users.role === 'admin') { %>
           <a href="/user">Manage User</a>
@@ -32,6 +32,21 @@
 
       </div>
      
+    </div> -->
+
+    <div class="dh-menu">
+      <div class="menu-links">
+        <% if (users && users.role === 'admin') { %>
+          <a href="/user">Manage User</a>
+        <% } %>
+        <a href="/add">Add Data</a>
+        <a href="/manage-data">Manage Data</a>
+        <% if (users && users.role === 'admin') { %>
+          <a href="/activities">User Activities</a>
+        <% } %>   
+         <a href="/map">Map</a>
+        <a href="/logout">Logout</a>
+      </div>
     </div>
     <div class="dh-nav-content">
       <div class="dh-nav">
