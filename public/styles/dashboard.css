@@ -331,9 +331,9 @@ text-align: center;
 
 .form-grid {
   display: flex;
-  gap: 25px;
-  min-width: 1200px; /* Enables horizontal scrolling on small screens */
-  padding-bottom: 10px;
+  gap: 11px;
+  min-width: 1200px; 
+  padding-bottom: 9px;
 }
 
 .form-group {
@@ -465,6 +465,28 @@ text-align: center;
     color: white;
   }
   
+
+  /* upload css */
+
+  .upload-form {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .upload-form input[type="file"] {
+    padding: 2px;
+  }
+  
+  .upload-form button {
+    padding: 8px 4px;
+    background-color: #00ff6a;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
 
 
   @media (max-width: 1024px) {

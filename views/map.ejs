@@ -42,7 +42,7 @@
 <!-- Leaflet Geocoder JS -->
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-<script>
+<!-- <script>
   const map = L.map('map').setView([0, 0], 2);
 
   // Add OpenStreetMap tiles
@@ -73,6 +73,61 @@
   let marker;
 
   // Handle map click to show coordinates
+  map.on('click', function(e) {
+    const { lat, lng } = e.latlng;
+    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
+
+    if (marker) {
+      marker.setLatLng(e.latlng);
+    } else {
+      marker = L.marker(e.latlng).addTo(map);
+    }
+  });
+</script> -->
+
+<script>
+  const map = L.map('map').setView([0, 0], 2);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const lat = parseFloat(urlParams.get('lat'));
+  const lng = parseFloat(urlParams.get('lng'));
+
+  let marker;
+
+  if (!isNaN(lat) && !isNaN(lng)) {
+    const latLng = [lat, lng];
+    map.setView(latLng, 10); // Zoom in
+    marker = L.marker(latLng).addTo(map)
+      .bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}`)
+      .openPopup();
+
+    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
+  }
+
+  // Add geocoder
+  const geocoder = L.Control.geocoder({
+    defaultMarkGeocode: false
+  })
+  .on('markgeocode', function(e) {
+    const bbox = e.geocode.bbox;
+    const center = e.geocode.center;
+
+    map.fitBounds(bbox);
+
+    if (marker) {
+      marker.setLatLng(center);
+    } else {
+      marker = L.marker(center).addTo(map);
+    }
+
+    document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}`;
+  })
+  .addTo(map);
+
   map.on('click', function(e) {
     const { lat, lng } = e.latlng;
     document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;

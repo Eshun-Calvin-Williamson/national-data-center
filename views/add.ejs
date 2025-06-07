@@ -11,10 +11,14 @@
   <div class="main-dashboard">
     <div class="dh-menu">
       <div class="menu-links">
-        <a href="/user">Manage User</a>
+        <% if (users && users.role === 'admin') { %>
+          <a href="/user">Manage User</a>
+        <% } %>
         <a href="/add">Add Data</a>
         <a href="/manage-data">Manage Data</a>
-        <a href="/activities">User Activities</a>
+        <% if (users && users.role === 'admin') { %>
+          <a href="/activities">User Activities</a>
+        <% } %>
         <a href="/map">Map</a>
         <a href="/logout">Logout</a>
       </div>
@@ -25,54 +29,54 @@
         
       </div>
       <div class="event-data">
-        <h1>Insert Seismic Event Data</h1>
+        <h1>IMS Data</h1>
         <form action="/events" method="post" class="event-form">
           <div class="form-grid">
-            <div class="form-group">
+            <div class="form-group" style="min-width: 80px;">
               <label for="id">ID</label>
               <input type="text" name="id" id="id" placeholder="Event ID" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 150px;">
               <label for="day">Date</label>
               <input type="text" name="day" id="day" placeholder="DD/MM/YYYY" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 100px;">
               <label for="minute">Minute</label>
               <input type="text" name="minute" id="minute" placeholder="00:00" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 100px;">
               <label for="second">Second</label>
               <input type="text" name="second" id="second" placeholder="00:00:00" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 150px;">
               <label for="latitude">Latitude</label>
               <input type="text" name="latitude" id="latitude" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 150px;">
               <label for="longitude">Longitude</label>
               <input type="text" name="longitude" id="longitude" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 50px;">
               <label for="H">H</label>
               <input type="text" name="H" id="H" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 50px;">
               <label for="Mb">Mb</label>
               <input type="text" name="Mb" id="Mb" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 50px;">
               <label for="Ml">Ml</label>
               <input type="text" name="Ml" id="Ml" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width:50px;">
               <label for="Az">Az</label>
               <input type="text" name="Az" id="Az" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 140px;">
               <label for="location">Location</label>
               <input type="text" name="location" id="location" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="min-width: 160px;">
               <label for="nearest_location">Nearest Location</label>
               <input type="text" name="nearest_location" id="nearest_location" required>
             </div>

@@ -168,7 +168,7 @@ if(req.session.user?.role !== 'admin'){
 })
 
 app.get('/add', isAuthenticated, (req,res)=>{
-  res.render('add.ejs')
+  res.render('add.ejs',{users: req.session.user})
 })
 
 // app.get('/manage-data',(req,res)=>{
@@ -397,6 +397,9 @@ app.get('/search',async (req,res)=>{
     const results =await db.query(
       `SELECT * FROM data WHERE 
         TO_CHAR(day, 'YYYY-MM-DD') ILIKE $1
+        OR TO_CHAR(day, 'YYYY') ILIKE $1
+        OR TO_CHAR(day, 'MM') ILIKE $1
+        OR TO_CHAR(day, 'DD') ILIKE $1
         OR CAST(minute AS TEXT) ILIKE $2
         OR CAST(second AS TEXT) ILIKE $3
         OR CAST(latitude AS TEXT) ILIKE $4
@@ -559,6 +562,16 @@ app.get('/download-excel', async (req, res) => {
     console.error('Error exporting Excel:', err);
     res.status(500).send('Failed to export Excel file');
   }
+});
+
+
+// upload route 
+app.post('/upload-data',upload.single('file'), async (req,res)=>{
+  if(!req.file) {
+    return res.status(400).send("NO file Uploaded.")
+  };
+
+  res.redirect('/manage-data')
 });
 
 
