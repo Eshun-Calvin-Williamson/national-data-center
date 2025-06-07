@@ -2,6 +2,8 @@ import express, { query } from 'express'
 import bodyParser from 'body-parser';
 import path from 'path'
 import { dirname } from 'path';
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 // import  axois from 'axois';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
@@ -16,6 +18,7 @@ dotenv.config()
   
 
 import { name } from 'ejs';
+import bcrypt from 'bcrypt'
 
 
 
@@ -236,6 +239,7 @@ app.post('/submit',passcode, isAuthenticated, async (req,res)=>{
 
 
 app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
+  // const hashedPassword = await bcrypt.hash(password, 10);
   const {id,password,email,name,role} =req.body;
   const image = req.file ? `/uploads/${req.file.filename}`: null;
 
@@ -556,6 +560,59 @@ app.get('/download-excel', async (req, res) => {
     res.status(500).send('Failed to export Excel file');
   }
 });
+
+
+// forget and reset password route
+
+app.get('/forgot-password', (req, res) => {
+  const success = req.query.success || null;
+  const error = req.query.error || null;
+  res.render('forgot-password', { success, error });
+});
+
+
+
+app.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 3600000); // 1 hour
+
+  try {
+    // Save token and expiry to DB
+    await db.query(
+      'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3',
+      [token, expires, email]
+    );
+
+    // Send email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'your-email@gmail.com',
+        pass: 'ajkg beuj ttbb ulkf'
+      }
+    });
+
+    const resetLink = `http://localhost:3000/reset-password/${token}`;
+    await transporter.sendMail({
+      to: email,
+      subject: 'Password Reset',
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password. The link expires in 1 hour.</p>`
+    });
+
+    res.render('forgot-password', {
+      success: 'Check your email for reset instructions.',
+      error: null
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('forgot-password', {
+      error: 'Something went wrong. Please try again.',
+      success: null
+    });
+  }
+});
+
 
 
 
