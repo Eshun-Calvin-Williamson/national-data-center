@@ -55,8 +55,17 @@
           </div>
       
           <div class="form-group">
-            <label for="photo">Upload Picture</label>
-            <input type="file" name="photo" id="photo" accept="image/*" capture="environment">
+            <div>
+              <button onclick="document.getElementById('photo').click()">Upload picture</button>
+              <input 
+              type="file"
+              name="photo" 
+              id="photo" 
+              accept="image/*" 
+              capture="environment" 
+              style="display: none;">
+            </div>
+            
           </div>
       
           <div class="form-actions">

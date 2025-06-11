@@ -1,4 +1,4 @@
-import express, { query } from 'express'
+import express from 'express'
 import bodyParser from 'body-parser';
 import path from 'path'
 import { dirname } from 'path';
@@ -14,6 +14,8 @@ import { Parser } from 'json2csv';
 import ExcelJS from 'exceljs';
 import session from 'express-session';
 import dotenv from 'dotenv';
+import csv from 'csv-parser';
+import xlsx from 'xlsx';
 dotenv.config()
   
 
@@ -314,8 +316,10 @@ app.post('/events', async (req, res) => {
   const {
     id,
     day,
+    month,
     minute,
     second,
+    hour,
     latitude,
     longitude,
     H,
@@ -327,7 +331,7 @@ app.post('/events', async (req, res) => {
   } = req.body;
 
   if (
-    !id || !day || !minute || !second ||
+    !id || !day || !month || !minute || !second || !hour ||
     !latitude || !longitude || !H || !Mb ||
     !Ml || !Az || !location || !nearest_location
   ) {
@@ -337,14 +341,16 @@ app.post('/events', async (req, res) => {
   try {
     await db.query(`
       INSERT INTO data (
-        id, day, minute, second, latitude, longitude, h, mb, ml, az, location, nearest_location
+        id, day, mm, minute, second, hr, latitude, longitude, h, mb, ml, az, location, nearest_location
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14
       )
       ON CONFLICT (id) DO UPDATE SET
         day = EXCLUDED.day,
+        mm = EXCLUDED.mm,
         minute = EXCLUDED.minute,
         second = EXCLUDED.second,
+        hr = EXCLUDED.hr,
         latitude = EXCLUDED.latitude,
         longitude = EXCLUDED.longitude,
         h = EXCLUDED.h,
@@ -356,8 +362,10 @@ app.post('/events', async (req, res) => {
     `, [
       id,
       day,
+      month,
       minute,
       second,
+      hour,
       latitude,
       longitude,
       H,
@@ -384,7 +392,11 @@ app.get('/manage-data',isAuthenticated, async (req,res)=>{
   try {
     const results =await db.query(`SELECT * FROM data`);
     console.log('Fetched events:', results.rows);
-    res.render('manage-data.ejs',{data:results.rows })
+    res.render('manage-data.ejs',
+      {
+      data:results.rows,
+      users: req.session.user
+     })
   } catch (err) {
     console.error('Error Fetching data',err);
     res.status(500).send(`error in your client`);
@@ -566,16 +578,204 @@ app.get('/download-excel', async (req, res) => {
 
 
 // upload route 
-app.post('/upload-data',upload.single('file'), async (req,res)=>{
-  if(!req.file) {
-    return res.status(400).send("NO file Uploaded.")
-  };
 
-  res.redirect('/manage-data')
+
+app.post('/upload-data', upload.single('upload'), async (req, res) => {
+  if (!req.file) return res.status(400).send('No file uploaded.');
+
+  const filePath = req.file.path;
+  const ext = path.extname(filePath).toLowerCase();
+  const rows = [];
+
+  try {
+    if (ext === '.csv') {
+      const fs = await import('fs');
+      fs.createReadStream(filePath)
+        .pipe(csv())
+        .on('data', (row) => {
+          console.log('Parsed CSV row:', row);
+          rows.push(row);
+        })
+        .on('end', async () => {
+          console.log('All CSV rows:', rows);
+          await insertRows(rows, req, res);
+        });
+    } else if (ext === '.xlsx' || ext === '.xls') {
+      const workbook = xlsx.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const data = xlsx.utils.sheet_to_json(sheet, { defval: null });
+      console.log('Parsed Excel data:', data);
+
+      // Map Excel columns to expected fields
+      const mappedRows = data
+        .filter((row, index) => {
+          // Skip the header row
+          if (row.__EMPTY === 'ID' && row['EARTHQUAKES RECORDED IN AFRICA; NOVEMBER 2024'] === 'MM'){
+            return false;
+          }
+          if (row.__EMPTY == null){
+            console.warn(`Skipping row ${index + 2} with null id:`,row);
+            return false;
+          }
+          return true;
+        })
+        .map((row, index) => {
+          // Safely handle fields
+          const safeString = (value) => {
+            if (typeof value === 'string') return value.trim();
+            if (value == null) return null;
+            return isFinite(value) ? value.toString() : null;
+          };
+
+          const safeNumber = (value) => {
+            if (value == null) return 0;
+            if (typeof value === 'string') {
+              const cleaned = value.replace(/f$/, '');
+              return isFinite(cleaned) ? parseFloat(cleaned) : 0;
+            }
+            return isFinite(value) ? parseFloat(value) : 0;
+          };
+
+          // Debug the raw MM column value
+          const rawMM = row['EARTHQUAKES RECORDED IN AFRICA; NOVEMBER 2024'];
+          const rawH =row.__EMPTY_7;
+          const rawMb = row.__EMPTY_8;
+          if (rawH == null || rawMb == null) {
+            console.warn(`Missing MM value in row ${index + 2}:`,{rawH,rawMb,row} );
+          }
+
+          const rowData = {
+            id: safeNumber(row.__EMPTY),
+            mm: safeString(rawMM) || 'NOV', // Default to 'NOV' if missing
+            day: safeNumber(row.__EMPTY_1),
+            hr: safeNumber(row.__EMPTY_2),
+            minute: safeNumber(row.__EMPTY_3),
+            second: safeNumber(row.__EMPTY_4),
+            latitude: safeNumber(row.__EMPTY_5),
+            longitude: safeNumber(row.__EMPTY_6),
+            h: safeNumber(rawH),
+            mb: safeNumber(rawMb),
+            ml: safeNumber(row.__EMPTY_9),
+            az: safeNumber(row.__EMPTY_10),
+            location: safeString(row.__EMPTY_11),
+            nearest_location: safeString(row.__EMPTY_12)
+          };
+
+          // Log warnings for invalid values
+          Object.entries(rowData).forEach(([key, value]) => {
+            if (value === null && key !== 'ml') {
+              console.warn(`Invalid ${key} in row ${index + 2}:`, row[key]);
+            }
+          });
+
+          return rowData;
+        });
+
+      console.log('Mapped Excel rows:', mappedRows);
+      await insertRows(mappedRows, req, res);
+    } else {
+      return res.status(400).send('Unsupported file format. Upload .csv or .xlsx only.');
+    }
+  } catch (err) {
+    console.error('Error processing uploaded file:', err.stack);
+    res.status(500).send('Error processing file: ' + err.message);
+  }
 });
 
 
-// forget and reset password route
+
+async function insertRows(rows, req, res) {
+  try {
+    let insertedCount = 0;
+    let skippedCount = 0;
+
+    for (const row of rows) {
+      const {
+        id, day, mm, minute, second, hr,
+        latitude, longitude, h, mb, ml, az,
+        location, nearest_location
+      } = row;
+
+      // Validate required fields (mm is now optional)
+      if (!id || id === '' || id === null || id === undefined || !isFinite(id)) {
+        console.warn(`Skipping row with missing or invalid id:`, row);
+        skippedCount++;
+        continue;
+      }
+      if (
+        !day || !minute || !second || !hr ||
+        !latitude || !longitude || !isFinite(h) || !isFinite(mb) || !az ||
+        !location || !nearest_location
+      ) {
+        console.warn(`Skipping row with missing fields:`, row);
+        skippedCount++;
+        continue;
+      }
+
+      // Convert data types if needed
+      const cleanedRow = {
+        id: parseInt(id, 10),
+        day: parseInt(day, 10),
+        mm,
+        minute: parseInt(minute, 10),
+        second: parseFloat(second),
+        hr: parseInt(hr, 10),
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        h: parseFloat(h) || 0,
+        mb: parseFloat(mb),
+        ml: ml ? parseFloat(ml) : null,
+        az: parseInt(az, 10),
+        location,
+        nearest_location
+      };
+
+      await db.query(`
+        INSERT INTO data (
+          id, day, mm, minute, second, hr,
+          latitude, longitude, h, mb, ml, az,
+          location, nearest_location
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          day = EXCLUDED.day,
+          mm = EXCLUDED.mm,
+          minute = EXCLUDED.minute,
+          second = EXCLUDED.second,
+          hr = EXCLUDED.hr,
+          latitude = EXCLUDED.latitude,
+          longitude = EXCLUDED.longitude,
+          h = EXCLUDED.h,
+          mb = EXCLUDED.mb,
+          ml = EXCLUDED.ml,
+          az = EXCLUDED.az,
+          location = EXCLUDED.location,
+          nearest_location = EXCLUDED.nearest_location
+      `, [
+        cleanedRow.id, cleanedRow.day, cleanedRow.mm, cleanedRow.minute,
+        cleanedRow.second, cleanedRow.hr, cleanedRow.latitude, cleanedRow.longitude,
+        cleanedRow.h, cleanedRow.mb, cleanedRow.ml, cleanedRow.az,
+        cleanedRow.location, cleanedRow.nearest_location
+      ]);
+
+      insertedCount++;
+    }
+
+    await logActivity(req.session.user, 'Upload Data', `${insertedCount} records uploaded, ${skippedCount} records skipped due to invalid data`);
+
+    res.redirect(`/manage-data?success=Uploaded ${insertedCount} records successfully, skipped ${skippedCount} invalid rows`);
+  } catch (err) {
+    console.error('Error inserting uploaded data:', err.stack);
+    res.status(500).send('Error saving uploaded data: ' + err.message);
+  }
+}
+
+
+
+
+
 
 app.get('/forgot-password', (req, res) => {
   const success = req.query.success || null;

@@ -15,7 +15,7 @@ body, h1, h2, h3, p, ul, li {
 .main-dashboard{
   position: relative;
   width: 100%;
-  height: 110vh;
+  height: 100vh;
   overflow: hidden;
 }
 /* 
@@ -96,7 +96,7 @@ body, h1, h2, h3, p, ul, li {
 
 
 .dh-nav-content .dh-nav{
-  height: 6rem;
+  height: 4.5rem;
   background-color: #007bff;
 }
 
@@ -120,7 +120,7 @@ body, h1, h2, h3, p, ul, li {
 }
 
 .dh-nav-content .dh-content{
-  height: 100vh;
+  height: 90vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -306,7 +306,7 @@ text-align: center;
   padding: 40px;
   background-color: #f9f9f9;
   border-radius: 16px;
-  max-width: 100%;
+  max-width: 96%;
   margin: auto;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   overflow-x: auto;
@@ -435,7 +435,7 @@ text-align: center;
 
 
   .atv-tb {
-    max-height: 650px; 
+    max-height: 500px; 
     overflow-y: auto;  
     margin: 20px;
     border: 1px solid #ccc;

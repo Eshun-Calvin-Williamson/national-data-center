@@ -27,10 +27,18 @@
         <a href="/download-excel" class="btn btn-success">📊 Download as Excel format</a>
 
 
-        <form action="/upload-data" method="POST" enctype="multipart/form-data" class="upload-form">
-          <label for="file">Upload:</label>
-          <input type="file" name="file" id="file" accept=".csv, .xlsx, .xls" required>
-          <button type="submit">Upload</button>
+        <form action="/upload-data" method="POST" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+          <div style="margin-top: 16px; margin-right: 20px;" >
+            <button type="button" onclick="document.getElementById('fileInput').click()">Upload</button>
+            <input 
+              type="file" 
+              id="fileInput" 
+              name="upload" 
+              style="display: none;"
+              accept=".csv, .xlsx, .xls"
+            >
+          </div>
+          
         </form>
 
       </div>
@@ -46,7 +54,9 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Month</th>
             <th>Day</th>
+            <th>Hour</th>
             <th>Minute</th>
             <th>Second</th>
             <th>Latitude</th>
@@ -64,7 +74,9 @@
           <% data.forEach(data => { %>
             <tr> 
               <td><%= data.id %></td>
+              <td><%= data.mm %></td>
               <td><%= data.day %></td>
+              <td><%= data.hr %></td>
               <td><%= data.minute %></td>
               <td><%= data.second %></td>
               <td><%= data.latitude %></td>
@@ -100,4 +112,14 @@
 <script>
   const Scroll = document.getElementById('atv');
   Scroll.scrollTop = Scroll.scrollHeight;
+
+  
+  const fileInput = document.getElementById('fileInput');
+  const uploadForm = document.getElementById('uploadForm');
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files.length > 0) {
+      uploadForm.submit();
+    }
+  });
 </script>

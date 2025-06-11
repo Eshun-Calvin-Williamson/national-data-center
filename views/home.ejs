@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/styles/home.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <title>GAEC</title>
 </head>
 <body>
@@ -44,22 +45,36 @@
     <form action="/submit" method="post" class="styled-form">
       <h2>LOGIN</h2>
       <label for="id">ID</label>
-      <input type="id" name="is" id="is" required>
+      <input type="id" name="is" id="is" placeholder="Enter ID" required>
       <label for="email">EMAIL</label>
       <input type="email" name="email" id="email" placeholder="Enter valid email">
       <label for="password">PASSCODE</label>
+
+      <div style="position: relative; padding: 1px;">
+
       <input type="password" name="password" id="pass" placeholder="Enter Password">
-      <input type="checkbox" onclick="myFunction()" >Show Password
+
+      <span style="position: absolute;
+      top: 40%;
+      right: 40px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #555;" class="eye" onclick="showPassword()">
+
+        <i class="fas fa-eye"></i>
+        
+      </span>
+    </div>
 
       <div style="margin-top: 8px; margin-bottom: 16px;">
         <a href="/forgot-password" style="font-size: 14px; color: #007BFF; text-decoration: none;">Forgot Password?</a>
       </div>
       
-      <div class="checkbox-container">
+      <!-- <div class="checkbox-container">
         <input type="checkbox" name="checkbox" id="check" required>
         <br><br>
         <label for="checkbox">Check to agree to terms</label>
-      </div>
+      </div> -->
       <button type="submit">SUBMIT</button>
     </form>
   </div>
@@ -69,13 +84,18 @@
 </html>
 
 <script>
-  function myFunction() {
-  var x = document.getElementById("pass");
-  if (x.type === "password") {
-    x.type = "text";
-  } else {
-    x.type = "password";
-  }
-}
-</script>
+  const showPassword = () => {
+    const pass = document.getElementById('pass');
+    const icon = document.querySelector('.eye i');
+  
+    if (pass.type === "password") {
+      pass.type = "text";
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      pass.type = "password";
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  };
+  </script>
+  
 <%- include("partials/footer.ejs") %>

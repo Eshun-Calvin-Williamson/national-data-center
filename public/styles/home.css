@@ -24,7 +24,7 @@ body {
   background-image: url('/images/bg-image.jpg'); /* Path to your image */
   background-size: cover;
   background-position: center;
-  filter: blur(4px);
+  /* filter: blur(2px); */
   z-index: 1; /* Place the blur behind content */
 }
 
@@ -49,10 +49,9 @@ body {
   position: absolute;
   background-color: #fff;
   border-radius: 10px;
-  padding: 5px 10px;
+  padding: 2px 7px;
   box-shadow: 0px 8px 10px rgba(0, 0, 0, 0.2);
-  width: 100%;
-  max-width: 400px;
+  max-width: 335px;
   text-align: center;
   color: #333;
 
@@ -68,16 +67,19 @@ body {
 /* Form Labels */
 .styled-form label {
   display: block;
-  text-align: left;
+  text-align: center;
   margin-bottom: 5px;
   font-size: larger;
+  color: #007bff;
+  font-weight: bold;
+
 }
 
 /* Form Inputs */
 .styled-form input[type="email"],
 .styled-form input[type="password"],
 .styled-form input[type ="id"] {
-  width: 100%;
+  width: 60%;
   padding: 4px;
   margin-bottom: 5px;
   border: 1px solid #007bff4b;
