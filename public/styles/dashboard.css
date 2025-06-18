@@ -464,7 +464,50 @@ text-align: center;
     background: #007bff;
     color: white;
   }
+
+
+  .input-data{
+    width: 100%;
+    color: #00ff6a;
+  }
+
+  .form-select{
+    width: 140px;
+    height: 25px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    color:#0056b3;
+    border-radius: 10px;
+    box-sizing: content-box;
+  }
+
+  .form-control{
+    width:300px;
+    height: 25px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    border-radius: 10px;
+    box-sizing: content-box;
+    background-color: hsl(210, 67%, 96%);
+  }
+
+  .primary{
+    width:60px;
+    height: 25px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    border-radius: 10px;
+    box-sizing: content-box;
+    background-color: hsl(211, 88%, 61%);
+  }
   
+  .primary:hover{
+    cursor: pointer;
+    background-color: hsl(120, 62%, 62%);
+  }
 
   /* upload css */
 

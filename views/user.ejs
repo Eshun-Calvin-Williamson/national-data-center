@@ -10,10 +10,14 @@
   <div class="main-dashboard">
     <div class="dh-menu">
       <div class="menu-links">
-        <a href="/user">Manage User</a>
+          <% if (user && user.role === 'admin') { %>
+          <a href="/user">Manage User</a>
+        <% } %>
         <a href="/add">Add Data</a>
         <a href="/manage-data">Manage Data</a>
-        <a href="/activities">User Activities</a>
+        <% if (user && user.role === 'admin') { %>
+          <a href="/activities">User Activities</a>
+        <% } %>    
         <a href="/map">Map</a>
         <a href="/logout">Logout</a>
       </div>
@@ -56,11 +60,11 @@
       
           <div class="form-group">
             <div>
-              <button onclick="document.getElementById('photo').click()">Upload picture</button>
+              <button type="button" id="uploadBtn">Upload picture</button>
               <input 
               type="file"
               name="photo" 
-              id="photo" 
+              id="photoIn" 
               accept="image/*" 
               capture="environment" 
               style="display: none;">
@@ -80,3 +84,9 @@
   </div>
 </body>
 </html>
+
+<script>
+  document.getElementById('uploadBtn').addEventListener('click', function () {
+    document.getElementById('photoIn').click();
+  });
+</script>

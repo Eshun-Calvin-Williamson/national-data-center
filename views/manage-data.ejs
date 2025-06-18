@@ -13,11 +13,20 @@
   <div class="main-dashboard">
     <div class="dh-menu">
       <div class="menu-links">
-        <a href="/user">Manage User</a>
+         <% if (users && users.role === 'admin') { %>
+          <a href="/user">Manage User</a>
+        <% } %>
+
         <a href="/add">Add Data</a>
+
         <a href="/manage-data">Manage Data</a>
-        <a href="/activities">User Activities</a>
+
+         <% if (users && users.role === 'admin') { %>
+          <a href="/activities">User Activities</a>
+        <% } %>
+
         <a href="/map">Map</a>
+
         <a href="/logout">Logout</a>
       </div>
     </div>
@@ -46,8 +55,33 @@
 
 
       <form action="/search" method="get" class="manage-data">
-        <input type="search" name="query" placeholder="search all avaliable input">
-        <button type="submit">Search</button>
+        <div class="input-group">
+         <select name="column" class="form-select">
+          <option value="">All Columns</option>
+          <option value="id">ID</option>
+          <option value="day">Day</option>
+          <option value="mm">Month</option>
+          <option value="minute">Minute</option>
+          <option value="second">Second</option>
+          <option value="hr">Hour</option>
+          <option value="latitude">Latitude</option>
+          <option value="longitude">Longitude</option>
+          <option value="h">Depth (H)</option>
+          <option value="mb">Mb</option>
+          <option value="ml">Ml</option>
+          <option value="az">Azimuth (Az)</option>
+          <option value="location">Location</option>
+          <option value="nearest_location">Nearest Location</option>
+         </select>
+            <input
+              type="text"
+              name="query"
+              class="form-control"
+              placeholder="Search..."
+              value="<%= query || '' %>"
+            />
+            <button type="submit" class="primary">Search</button>
+        </div>
       </form>
       <div class="atv-tb" id="atv">
       <table border="1">

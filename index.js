@@ -395,7 +395,9 @@ app.get('/manage-data',isAuthenticated, async (req,res)=>{
     res.render('manage-data.ejs',
       {
       data:results.rows,
-      users: req.session.user
+      users: req.session.user,
+      query: '',
+      column: ''
      })
   } catch (err) {
     console.error('Error Fetching data',err);
@@ -403,31 +405,96 @@ app.get('/manage-data',isAuthenticated, async (req,res)=>{
   }
 })
 
-app.get('/search',async (req,res)=>{
-  const {query} =req.query;
+// app.get('/search',async (req,res)=>{
+//   const {query} =req.query;
+//   try {
+//     const results =await db.query(
+//       `SELECT * FROM data WHERE 
+//         TO_CHAR(day, 'YYYY-MM-DD') ILIKE $1
+//         OR TO_CHAR(day, 'YYYY') ILIKE $1
+//         OR TO_CHAR(day, 'MM') ILIKE $1
+//         OR TO_CHAR(day, 'DD') ILIKE $1
+//         OR CAST(minute AS TEXT) ILIKE $2
+//         OR CAST(second AS TEXT) ILIKE $3
+//         OR CAST(latitude AS TEXT) ILIKE $4
+//         OR CAST(longitude AS TEXT) ILIKE $5
+//         OR CAST(h AS TEXT) ILIKE $6
+//         OR CAST(mb AS TEXT) ILIKE $7
+//         OR CAST(ml AS TEXT) ILIKE $8
+//         OR CAST(az AS TEXT) ILIKE $9
+//         OR location ILIKE $10
+//         OR nearest_location ILIKE $11`,
+//         [`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`]
+//     )
+//     res.render("manage-data.ejs",{data:results.rows})
+//   } catch (err) {
+//     console.error('Error fetching data',err)
+//     res.status(500).send('error on user end');
+//   }
+// });
+
+
+app.get('/search', async (req, res) => {
+  const { query, column } = req.query;
+
+  // If no query is provided, return all data
+  if (!query) {
+    try {
+      const results = await db.query('SELECT * FROM data');
+      return res.render('manage-data.ejs', { data: results.rows, users: req.session.user });
+    } catch (err) {
+      console.error('Error fetching all data:', err);
+      return res.status(500).send('Error fetching data');
+    }
+  }
+
+  // Define valid columns to prevent postgrSQL injection
+  const validColumns = [
+    'id', 'day', 'mm', 'minute', 'second', 'hr', 'latitude', 'longitude',
+    'h', 'mb', 'ml', 'az', 'location', 'nearest_location'
+  ];
+
+  // Default to searching all columns if no specific column is provided
+  let sqlQuery = '';
+  let queryParams = [];
+
+  if (column && validColumns.includes(column)) {
+    // Search in a specific column
+    sqlQuery = `SELECT * FROM data WHERE ${column}::TEXT ILIKE $1`;
+    queryParams = [`%${query}%`];
+  } else {
+    // Search across all columns
+    sqlQuery = `
+      SELECT * FROM data WHERE
+        id::TEXT ILIKE $1 OR
+        day::TEXT ILIKE $1 OR
+        mm ILIKE $1 OR
+        minute::TEXT ILIKE $1 OR
+        second::TEXT ILIKE $1 OR
+        hr::TEXT ILIKE $1 OR
+        latitude::TEXT ILIKE $1 OR
+        longitude::TEXT ILIKE $1 OR
+        h::TEXT ILIKE $1 OR
+        mb::TEXT ILIKE $1 OR
+        ml::TEXT ILIKE $1 OR
+        az::TEXT ILIKE $1 OR
+        location ILIKE $1 OR
+        nearest_location ILIKE $1
+    `;
+    queryParams = [`%${query}%`];
+  }
+
   try {
-    const results =await db.query(
-      `SELECT * FROM data WHERE 
-        TO_CHAR(day, 'YYYY-MM-DD') ILIKE $1
-        OR TO_CHAR(day, 'YYYY') ILIKE $1
-        OR TO_CHAR(day, 'MM') ILIKE $1
-        OR TO_CHAR(day, 'DD') ILIKE $1
-        OR CAST(minute AS TEXT) ILIKE $2
-        OR CAST(second AS TEXT) ILIKE $3
-        OR CAST(latitude AS TEXT) ILIKE $4
-        OR CAST(longitude AS TEXT) ILIKE $5
-        OR CAST(h AS TEXT) ILIKE $6
-        OR CAST(mb AS TEXT) ILIKE $7
-        OR CAST(ml AS TEXT) ILIKE $8
-        OR CAST(az AS TEXT) ILIKE $9
-        OR location ILIKE $10
-        OR nearest_location ILIKE $11`,
-        [`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`]
-    )
-    res.render("manage-data.ejs",{data:results.rows})
+    const results = await db.query(sqlQuery, queryParams);
+    res.render('manage-data.ejs', {
+      data: results.rows,
+      users: req.session.user,
+      query,
+      column
+    });
   } catch (err) {
-    console.error('Error fetching data',err)
-    res.status(500).send('error on user end');
+    console.error('Error executing search query:', err);
+    res.status(500).send('Error searching data');
   }
 });
 
@@ -783,50 +850,150 @@ app.get('/forgot-password', (req, res) => {
   res.render('forgot-password', { success, error });
 });
 
-
-
 app.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 3600000); // 1 hour
 
   try {
-    // Save token and expiry to DB
+    const results = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = results.rows[0];
+
+    if (!user) {
+      await logActivity(null, 'Forgot Password Attempt', `No user found for email: ${email}`);
+      return res.render('forgot-password', {
+        success: null,
+        error: 'No account with that email address exists.'
+      });
+    }
+
+    // Generate reset token
+    const token = crypto.randomBytes(20).toString('hex');
+    const expires = new Date(Date.now() + 3600000); // 1 hour
+
+    // Store token and expiration in database
     await db.query(
-      'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3',
+      `UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE email = $3`,
       [token, expires, email]
     );
 
-    // Send email
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'your-email@gmail.com',
-        pass: 'ajkg beuj ttbb ulkf'
-      }
-    });
+    // Send reset email
+    const resetLink = `http://localhost:${port}/reset-password/${token}`;
+    const mailOptions = {
+      to: user.email,
+      from: process.env.EMAIL_USER,
+      subject: 'Password Reset Request',
+      text: `You are receiving this email because you (or someone else) requested a password reset.\n\n
+             Please click the following link to reset your password:\n\n
+             ${resetLink}\n\n
+             If you did not request this, please ignore this email.`
+    };
 
-    const resetLink = `http://localhost:3000/reset-password/${token}`;
-    await transporter.sendMail({
-      to: email,
-      subject: 'Password Reset',
-      html: `<p>Click <a href="${resetLink}">here</a> to reset your password. The link expires in 1 hour.</p>`
-    });
+    await transporter.sendMail(mailOptions);
+    await logActivity(user, 'Forgot Password', `Password reset link sent to ${email}`);
 
     res.render('forgot-password', {
-      success: 'Check your email for reset instructions.',
+      success: 'A password reset link has been sent to your email.',
       error: null
     });
   } catch (err) {
-    console.error(err);
+    console.error('Error processing forgot password:', err);
+    await logActivity(null, 'Forgot Password Error', `Error for email: ${email}`);
     res.render('forgot-password', {
-      error: 'Something went wrong. Please try again.',
-      success: null
+      success: null,
+      error: 'An error occurred. Please try again.'
+    });
+  }
+});
+
+// Reset Password Routes
+app.get('/reset-password/:token', async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const results = await db.query(
+      `SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2`,
+      [token, new Date()]
+    );
+    const user = results.rows[0];
+
+    if (!user) {
+      await logActivity(null, 'Invalid Reset Token', `Token: ${token}`);
+      return res.render('forgot-password', {
+        success: null,
+        error: 'Password reset token is invalid or has expired.'
+      });
+    }
+
+    res.render('reset-password', { token, success: null, error: null });
+  } catch (err) {
+    console.error('Error verifying reset token:', err);
+    await logActivity(null, 'Reset Password Error', `Error verifying token: ${token}`);
+    res.render('forgot-password', {
+      success: null,
+      error: 'An error occurred. Please try again.'
+    });
+  }
+});
+
+app.post('/reset-password/:token', async (req, res) => {
+  const { token } = req.params;
+  const { password, 'confirm-password': confirmPassword } = req.body;
+
+  if (password !== confirmPassword) {
+    return res.render('reset-password', {
+      token,
+      success: null,
+      error: 'Passwords do not match.'
+    });
+  }
+
+  try {
+    const results = await db.query(
+      `SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2`,
+      [token, new Date()]
+    );
+    const user = results.rows[0];
+
+    if (!user) {
+      await logActivity(null, 'Invalid Reset Token', `Token: ${token}`);
+      return res.render('forgot-password', {
+        success: null,
+        error: 'Password reset token is invalid or has expired.'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update password and clear reset token
+    await db.query(
+      `UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2`,
+      [hashedPassword, user.email]
+    );
+
+    await logActivity(user, 'Password Reset', `Password reset successfully for ${user.email}`);
+
+    res.render('reset-password', {
+      token,
+      success: 'Password has been reset successfully. You can now log in.',
+      error: null
+    });
+  } catch (err) {
+    console.error('Error resetting password:', err);
+    await logActivity(null, 'Reset Password Error', `Error for token: ${token}`);
+    res.render('reset-password', {
+      token,
+      success: null,
+      error: 'An error occurred. Please try again.'
     });
   }
 });
 
 
+// $(document).ready(function(){
+//   $('#next').click(function(){
+//     window.location.href='Resume.html'
+//   });
+// });
 
 
 app.listen(port,()=>{
