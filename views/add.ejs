@@ -41,7 +41,7 @@
         </form>
       </div>
       <div class="event-data">
-        <h1>IMS Data</h1>
+        <h1>SHI Data</h1>
         <form action="/events" method="post" class="event-form">
           <div class="form-grid">
             <div class="form-group" style="min-width: 80px; text-align: center;">
@@ -102,6 +102,82 @@
             <div class="form-group" style="min-width:50px; text-align: center;">
               <label for="Az">Az</label>
               <input type="text" name="Az" id="Az" required>
+            </div>
+
+            <div class="form-group" style="min-width: 140px; text-align: center;">
+              <label for="location">Location</label>
+              <input type="text" name="location" id="location" required>
+            </div>
+
+            <div class="form-group" style="min-width: 160px; text-align: center;">
+              <label for="nearest_location">Nearest Location</label>
+              <input type="text" name="nearest_location" id="nearest_location" required>
+            </div>
+            
+          </div>
+          <div class="form-actions">
+            <button type="submit">Submit Event</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="event-data">
+        <h1>RADIONUCLIDE DATA</h1>
+        <form action="/radionuclide" method="post" class="radionuclide-form">
+          <div class="form-grid">
+            <div class="form-group" style="min-width: 40px; text-align: center;">
+              <label for="day">Day</label>
+              <input type="text" name="day" id="day" placeholder="DD" required>
+            </div>
+
+            <div class="form-group" style="min-width: 40px; text-align: center;">
+              <label for="Month">Month</label>
+              <input type="text" name="month" id="month" placeholder="MM" required>
+            </div>
+
+            <div class="form-group" style="min-width: 60px; text-align: center;">
+              <label for="minute">Minute</label>
+              <input type="text" name="minute" id="minute" placeholder="00:00" required>
+            </div>
+
+            <div class="form-group" style="min-width: 100px; text-align: center;">
+              <label for="seconds">Seconds</label>
+              <input type="text" name="seconds" id="seconds" placeholder="00:00" required>
+            </div>
+
+            <div class="form-group" style="min-width: 40px; text-align: center;">
+              <label for="Hour">Hour</label>
+              <input type="text" name="hour" id="hour" placeholder="HR" required>
+            </div>
+
+            <div class="form-group" style="min-width: 150px; text-align: center;">
+              <label for="latitude">Latitude</label>
+              <input type="text" name="latitude" id="latitude" required>
+            </div>
+
+            <div class="form-group" style="min-width: 150px; text-align: center;">
+              <label for="longitude">Longitude</label>
+              <input type="text" name="longitude" id="longitude" required>
+            </div>
+
+            <div class="form-group" style="min-width: 50px; text-align: center;">
+              <label for="depth_h">Depth</label>
+              <input type="text" name="depth_h" id="depth_h" required>
+            </div>
+
+            <div class="form-group" style="min-width: 50px; text-align: center;">
+              <label for="Mb">Mb</label>
+              <input type="text" name="Mb" id="Mb" required>
+            </div>
+
+            <div class="form-group" style="min-width: 50px; text-align: center;">
+              <label for="Ml">Ml</label>
+              <input type="text" name="Ml" id="Ml" required>
+            </div>
+
+            <div class="form-group" style="min-width:50px; text-align: center;">
+              <label for="Azimuth">Az</label>
+              <input type="text" name="Azimuth" id="Azimuth" required>
             </div>
 
             <div class="form-group" style="min-width: 140px; text-align: center;">
