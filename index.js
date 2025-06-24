@@ -21,6 +21,15 @@ dotenv.config()
 
 import { name } from 'ejs';
 import bcrypt from 'bcrypt'
+import rateLimit from 'express-rate-limit';
+
+
+
+const loginLimiter = rateLimit({
+  windowMs: 3* 60 * 1000, 
+  max: 3,
+  message: 'Too many login attempts, please try again later.'
+});
 
 
 const transporter =nodemailer.createTransport({
@@ -100,7 +109,8 @@ const passcode =async (req,res,next)=>{
 
 
 try {
-    const results =await db.query(`SELECT id, user_name, email, image, password,role FROM users WHERE email = $1`,[email])
+    const results =await db.query(`SELECT id, user_name, email, image, password,role FROM users WHERE email = $1`,[email]);
+    
     const users =results.rows[0];
     
     if(users){
@@ -258,7 +268,8 @@ app.get('/submit',isAuthenticated, (req,res)=>{
   res.render('dashbaord.ejs')
 })
 
-app.post('/submit',passcode, isAuthenticated, async (req,res)=>{
+app.post('/submit',passcode, isAuthenticated,loginLimiter,
+   async (req,res)=>{
   try {
     const nssResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role = $1',['nss']);
     const staffResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role =$1',['user'] );
@@ -292,12 +303,13 @@ app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
   // const hashedPassword = await bcrypt.hash(password, 10);
   const {id,password,email,name,role} =req.body;
   const image = req.file ? `/uploads/${req.file.filename}`: null;
+  const hashedPassword =await bcrypt.hash(password,10)
 
   try {
     await db.query(`INSERT INTO users (id,password,email,image,user_name,role)
        VALUES
        ($1,$2,$3,$4,$5,$6)`
-       ,[id,password,email,image,name,role]);
+       ,[id,hashedPassword,email,image,name,role]);
 
        await logActivity(req.session.user, 'Create User', `User ${email} added`);
 

@@ -6,6 +6,18 @@
   <title>NDC-GAEC-dashboard</title>
   <link rel="stylesheet" href="/styles/dashboard.css">
 </head>
+<style>
+  .search-container {
+  margin-bottom: 10px;
+}
+#searchInput {
+  padding: 8px;
+  width: 100%;
+  max-width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+</style>
 <body>
   <div class="main-dashboard">
     <div class="dh-menu">
@@ -23,7 +35,10 @@
       </div>
       <div class="atv-tb" id="atv">
       <h2>User Activity Logs</h2>
-      <table>
+        <div class="search-container">
+           <input type="text" id="searchInput" placeholder="Search logs..." onkeyup="searchTable()">
+        </div>
+      <table id="logTable">
         <thead>
           <tr>
             <th>User Name</th>
@@ -57,4 +72,27 @@
 <script>
   const Scroll = document.getElementById('atv');
   Scroll.scrollTop = Scroll.scrollHeight;
+
+   function searchTable() {
+      const input = document.getElementById('searchInput');
+      const filter = input.value.toLowerCase();
+      const table = document.getElementById('logTable');
+      const rows = table.getElementsByTagName('tr');
+
+      
+      for (let i = 1; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let match = false;
+
+        for (let j = 0; j < cells.length; j++) {
+          if (cells[j].textContent.toLowerCase().includes(filter)) {
+            match = true;
+            break;
+          }
+        }
+
+        rows[i].style.display = match ? '' : 'none';
+      }
+    }
+  
 </script>
