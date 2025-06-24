@@ -23,7 +23,13 @@ import { name } from 'ejs';
 import bcrypt from 'bcrypt'
 
 
-
+const transporter =nodemailer.createTransport({
+  service: 'gmail',
+  auth:{
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // connect database
 const db= new pg.Client(
@@ -169,6 +175,51 @@ if(req.session.user?.role !== 'admin'){
   res.render('user.ejs',{ user: req.session.user})
 })
 
+
+app.get('/delete-users', isAuthenticated, requireAdmin, async (req, res) => {
+  try {
+    const results = await db.query('SELECT id, user_name, email, role FROM users ORDER BY id');
+    await logActivity(req.session.user, 'View Delete Users', 'Admin accessed delete users page');
+    res.render('delete-users.ejs', {
+      user: req.session.user,
+      users: results.rows,
+      error: req.query.error,
+      success: req.query.success
+    });
+  } catch (err) {
+    console.error('Error fetching users for deletion:', err);
+    res.redirect('/delete-users?error=Error fetching users');
+  }
+});
+
+// New DELETE route for users
+app.delete('/delete-users/:id', isAuthenticated, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Prevent admin from deleting themselves
+    if (parseInt(id) === parseInt(req.session.user.id)) {
+      return res.redirect('/delete-users?error=Cannot delete your own account');
+    }
+
+    const result = await db.query('SELECT user_name, email FROM users WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.redirect('/delete-users?error=User not found');
+    }
+
+    const deletedUser = result.rows[0];
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
+    await logActivity(req.session.user, 'Delete User', `Deleted user ${deletedUser.email} (ID: ${id})`);
+
+    res.redirect('/delete-users?success=User deleted successfully');
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.redirect('/delete-users?error=Error deleting user');
+  }
+});
+
+
+
+
 app.get('/add', isAuthenticated, (req,res)=>{
   res.render('add.ejs',{users: req.session.user})
 })
@@ -209,19 +260,16 @@ app.get('/submit',isAuthenticated, (req,res)=>{
 
 app.post('/submit',passcode, isAuthenticated, async (req,res)=>{
   try {
-    const userResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE email = $1', ['active']);
-    const nssResults = await db.query('SELECT COUNT(*) AS count FROM users');
-    const staffResults = await db.query('SELECT COUNT(*) AS count FROM users' );
-    const totalResults = await db.query('SELECT COUNT(*) AS count FROM users');
+    const nssResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role = $1',['nss']);
+    const staffResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role =$1',['user'] );
 
 
-
+    const totalCount = parseInt(nssResults.rows[0].count) + parseInt(staffResults.rows[0].count);
     const usersResults = await db.query('SELECT id, email, image, user_name FROM users ');
     const metrics = {
-      activeMembers: userResults.rows[0].count,
       nssPersonnel: nssResults.rows[0].count,
       staffMembers: staffResults.rows[0].count,
-      totalMembers: totalResults.rows[0].count,
+      totalMembers: totalCount,
     };
 
     await logActivity(req.session.user, 'View Dashboard', 'User accessed dashboard');
@@ -441,7 +489,12 @@ app.get('/search', async (req, res) => {
   if (!query) {
     try {
       const results = await db.query('SELECT * FROM data');
-      return res.render('manage-data.ejs', { data: results.rows, users: req.session.user });
+      return res.render('manage-data.ejs', {
+         data: results.rows,
+         users: req.session.user,
+         query: '',
+         column: '' 
+        });
     } catch (err) {
       console.error('Error fetching all data:', err);
       return res.status(500).send('Error fetching data');
@@ -460,32 +513,33 @@ app.get('/search', async (req, res) => {
 
   if (column && validColumns.includes(column)) {
     // Search in a specific column
-    sqlQuery = `SELECT * FROM data WHERE ${column}::TEXT ILIKE $1`;
-    queryParams = [`%${query}%`];
+    sqlQuery = `SELECT * FROM data WHERE ${column}::TEXT = $1`;
+    queryParams = [query];
   } else {
     // Search across all columns
     sqlQuery = `
       SELECT * FROM data WHERE
-        id::TEXT ILIKE $1 OR
-        day::TEXT ILIKE $1 OR
-        mm ILIKE $1 OR
-        minute::TEXT ILIKE $1 OR
-        second::TEXT ILIKE $1 OR
-        hr::TEXT ILIKE $1 OR
-        latitude::TEXT ILIKE $1 OR
-        longitude::TEXT ILIKE $1 OR
-        h::TEXT ILIKE $1 OR
-        mb::TEXT ILIKE $1 OR
-        ml::TEXT ILIKE $1 OR
-        az::TEXT ILIKE $1 OR
-        location ILIKE $1 OR
-        nearest_location ILIKE $1
+        id::TEXT = $1 OR
+        day::TEXT = $1 OR
+        mm = $1 OR
+        minute::TEXT = $1 OR
+        second::TEXT = $1 OR
+        hr::TEXT = $1 OR
+        latitude::TEXT = $1 OR
+        longitude::TEXT = $1 OR
+        h::TEXT = $1 OR
+        mb::TEXT = $1 OR
+        ml::TEXT = $1 OR
+        az::TEXT = $1 OR
+        location = $1 OR
+        nearest_location = $1
     `;
-    queryParams = [`%${query}%`];
+    queryParams = [query];
   }
 
   try {
     const results = await db.query(sqlQuery, queryParams);
+    await logActivity(req.session.user, 'Search Data', `Searched for value "${query}" in ${column || 'all columns'}`);
     res.render('manage-data.ejs', {
       data: results.rows,
       users: req.session.user,
@@ -871,7 +925,7 @@ app.post('/forgot-password', async (req, res) => {
 
     // Store token and expiration in database
     await db.query(
-      `UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE email = $3`,
+      `UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3`,
       [token, expires, email]
     );
 
@@ -910,7 +964,7 @@ app.get('/reset-password/:token', async (req, res) => {
 
   try {
     const results = await db.query(
-      `SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2`,
+      `SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires > $2`,
       [token, new Date()]
     );
     const user = results.rows[0];
@@ -948,7 +1002,7 @@ app.post('/reset-password/:token', async (req, res) => {
 
   try {
     const results = await db.query(
-      `SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > $2`,
+      `SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires > $2`,
       [token, new Date()]
     );
     const user = results.rows[0];
@@ -966,7 +1020,7 @@ app.post('/reset-password/:token', async (req, res) => {
 
     // Update password and clear reset token
     await db.query(
-      `UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2`,
+      `UPDATE users SET password = $1, reset_token = NULL, reset_token_expires = NULL WHERE email = $2`,
       [hashedPassword, user.email]
     );
 
@@ -989,13 +1043,10 @@ app.post('/reset-password/:token', async (req, res) => {
 });
 
 
-// $(document).ready(function(){
-//   $('#next').click(function(){
-//     window.location.href='Resume.html'
-//   });
-// });
+
 
 
 app.listen(port,()=>{
   console.log(`server runing on port ${port}`)
 })
+
