@@ -136,10 +136,10 @@ body, h1, h2, h3, p, ul, li {
   justify-content: center;
   align-items: center;
   font-size: 9px;
-  font-weight: bold;
+  font-weight:normal;
   background-color: rgba(56, 165, 238, 0.527);
   border: none;
-  color: hsl(0, 4%, 5%);
+  color: hsl(0, 50%, 98%);
   border-radius: 8px;
 }
 .event-grid .grid-in:hover {
@@ -166,11 +166,11 @@ body, h1, h2, h3, p, ul, li {
 
 .right-column {
   flex: 1;
-  height: 95%;
+  height: 98%;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 10px;
+  padding: 5px;
   background-color: #f8f9fa;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -181,17 +181,24 @@ body, h1, h2, h3, p, ul, li {
 .data-display {
   flex: 1;
   max-height: 50%;
-  padding: 10px;
+  padding: 5px;
   background-color: #fff;
   border-radius: 8px;
 }
 
 
 
-#pieChart #barChart{
+#pieChart {
   width: 50%;
   height: 300px ;  
-  max-width: 450px;
+  max-width: 700px;
+  
+}
+
+ #barChart{
+  width: 50%;
+  height: 300px ;  
+  max-width: 700px;
 }
 
   .bar-chart {
@@ -620,7 +627,7 @@ body, h1, h2, h3, p, ul, li {
 
 
   .atv-tb {
-    max-height: 500px; 
+    max-height: 90vh; 
     overflow-y: auto;  
     margin: 20px;
     border: 1px solid #ccc;

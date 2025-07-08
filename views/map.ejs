@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Full-Screen Map with Search</title>
+  <title>Full-Screen Map with Search and Layers</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -30,68 +30,48 @@
       font-family: Arial, sans-serif;
       font-size: 17px;
       z-index: 1000;
+      max-width: 300px;
     }
   </style>
 </head>
 <body>
 <div id="map"></div>
-<div id="coords">Click on the map to get coordinates</div>
+<div id="coords">Click on the map to get coordinates and location</div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <!-- Leaflet Geocoder JS -->
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-<!-- <script>
-  const map = L.map('map').setView([0, 0], 2);
-
-  // Add OpenStreetMap tiles
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  // Add Geocoder Search
-  const geocoder = L.Control.geocoder({
-    defaultMarkGeocode: false
-  })
-  .on('markgeocode', function(e) {
-    const bbox = e.geocode.bbox;
-    const center = e.geocode.center;
-
-    map.fitBounds(bbox);
-
-    if (marker) {
-      marker.setLatLng(center);
-    } else {
-      marker = L.marker(center).addTo(map);
-    }
-
-    document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}`;
-  })
-  .addTo(map);
-
-  let marker;
-
-  // Handle map click to show coordinates
-  map.on('click', function(e) {
-    const { lat, lng } = e.latlng;
-    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
-
-    if (marker) {
-      marker.setLatLng(e.latlng);
-    } else {
-      marker = L.marker(e.latlng).addTo(map);
-    }
-  });
-</script> -->
-
 <script>
   const map = L.map('map').setView([0, 0], 2);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  // Define tile layers
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  });
 
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+  });
+
+  const terrain = L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg', {
+    attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>.'
+  });
+
+
+  // Add OpenStreetMap as default layer
+  osm.addTo(map);
+
+  // Layer control
+  const baseMaps = {
+    "OpenStreetMap": osm,
+    "Satellite": satellite,
+    "Terrain": terrain
+  };
+  L.control.layers(baseMaps).addTo(map);
+
+  // Handle URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const lat = parseFloat(urlParams.get('lat'));
   const lng = parseFloat(urlParams.get('lng'));
@@ -100,12 +80,19 @@
 
   if (!isNaN(lat) && !isNaN(lng)) {
     const latLng = [lat, lng];
-    map.setView(latLng, 10); // Zoom in
-    marker = L.marker(latLng).addTo(map)
-      .bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}`)
-      .openPopup();
-
+    map.setView(latLng, 10);
+    marker = L.marker(latLng).addTo(map);
     document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
+    // Reverse geocode for initial URL coordinates
+    L.Control.Geocoder.nominatim().reverse(
+      latLng,
+      map.options.crs.scale(map.getZoom()),
+      function(results) {
+        const name = results[0]?.name || 'Unknown location';
+        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${name}`;
+        marker.bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}<br>Location: ${name}`).openPopup();
+      }
+    );
   }
 
   // Add geocoder
@@ -115,6 +102,7 @@
   .on('markgeocode', function(e) {
     const bbox = e.geocode.bbox;
     const center = e.geocode.center;
+    const name = e.geocode.name || 'Unknown location';
 
     map.fitBounds(bbox);
 
@@ -124,19 +112,35 @@
       marker = L.marker(center).addTo(map);
     }
 
-    document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}`;
+    document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}, Location: ${name}`;
+    marker.bindPopup(`Latitude: ${center.lat.toFixed(5)}<br>Longitude: ${center.lng.toFixed(5)}<br>Location: ${name}`).openPopup();
   })
   .addTo(map);
 
+  // Handle map click with reverse geocoding
   map.on('click', function(e) {
+
+
     const { lat, lng } = e.latlng;
-    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
+    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, location: ${name}`;
+    
 
     if (marker) {
       marker.setLatLng(e.latlng);
     } else {
       marker = L.marker(e.latlng).addTo(map);
     }
+
+    // Perform reverse geocoding to get location name
+    L.Control.Geocoder.nominatim().reverse(
+      e.latlng,
+      map.options.crs.scale(map.getZoom()),
+      function(results) {
+        const name = results[0]?.name || 'Unknown location';
+        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${name}`;
+        marker.bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}<br>Location: ${name}`).openPopup();
+      }
+    );
   });
 </script>
 

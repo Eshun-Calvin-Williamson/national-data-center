@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <title>GAEC</title>
+  <style>
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 20px;
+      background-color: #f8f9fa;
+    }
+    .logo-container img {
+      height: 50px;
+      object-fit: contain;
+    }
+    .carousel-container {
+      max-width: 95%;
+      margin: 0 auto;
+    }
+    .carousel-item img, .carousel-item video {
+      height: 700px;
+      width: 100%;
+      object-fit: cover;
+    }
+    .login-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1050;
+    }
+    .modal-content {
+      border-radius: 10px;
+    }
+    .form-label {
+      font-weight: 500;
+    }
+    .eye {
+      position: absolute;
+      top: 70%;
+      right: 10px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #555;
+    }
+    .password-container {
+      position: relative;
+    }
+    .sound-toggle-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 14px;
+    }
+    .sound-toggle-btn:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Section with Logos -->
+  <header>
+    <nav>
+      <div class="logo-container">
+        <div class="geac-logo">
+          <a href="https://gaec.gov.gh/"><img src="/images/gaec.jpg" alt="GAEC Logo"></a>
+        </div>
+        <div class="ctbto-logo">
+          <a href="https://www.ctbto.org/"><img src="/images/ctbto.jpeg" alt="CTBTO Logo"></a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Carousel Section -->
+    <div class="carousel-container">
+      <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img src="/images/ndc.jpg" class="d-block w-100" alt="NDC Image">
+          </div>
+          <div class="carousel-item">
+            <img src="/images/infrasound.jpg" class="d-block w-100" alt="Infrasound Imaging">
+          </div>
+          <div class="carousel-item">
+            <video class="d-block w-100" id="play-infrasound" autoplay muted loop>
+              <source src="/images/The Infrasound Network and how it works.mp4" type="video/mp4">
+            </video>
+            <button onclick="toggleSound('play-infrasound', this)" class="sound-toggle-btn">
+              <i class="fas fa-volume-mute"></i><span>Enable Sound</span>
+            </button>
+          </div>
+          <div class="carousel-item">
+            <video class="d-block w-100" id="play-seismic" autoplay muted loop>
+              <source src="/images/The Seismic Network and how it works.mp4" type="video/mp4">
+            </video>
+            <button onclick="toggleSound('play-seismic', this)" class="sound-toggle-btn">
+              <i class="fas fa-volume-mute"></i><span>Enable Sound</span>
+            </button>
+          </div>
+          <div class="carousel-item">
+            <video class="d-block w-100" id="play" autoplay muted loop>
+              <source src="/images/ndcdata" type="video/mp4">
+            </video>
+            <button onclick="toggleSound('play', this)" class="sound-toggle-btn">
+              <i class="fas fa-volume-mute"></i><span>Enable Sound</span>
+            </button>
+          </div>
+          <div class="carousel-item">
+            <video class="d-block w-100" id="play-hydroacustics" autoplay muted loop>
+              <source src="/images/The Hydroacoustic Network and how it works.mp4" type="video/mp4">
+            </video>
+            <button onclick="toggleSound('play-hydroacustics', this)" class="sound-toggle-btn">
+              <i class="fas fa-volume-mute"></i><span>Enable Sound</span>
+            </button>
+          </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Button -->
+  <button type="button" class="btn btn-primary login-btn" data-bs-toggle="modal" data-bs-target="#loginModal">
+    Login
+  </button>
+
+  <!-- Login Modal -->
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="loginModalLabel">Login</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Feedback Messages -->
+          <% if (error) { %>
+            <div class="alert alert-danger" role="alert">
+              ❌ <%= error %>
+            </div>
+          <% } %>
+          <% if (success) { %>
+            <div class="alert alert-success" role="alert">
+              ✅ <%= success %>
+            </div>
+          <% } %>
+
+          <form action="/submit" method="post" class="needs-validation" novalidate>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" name="email" id="email" placeholder="Enter valid email" required>
+              <div class="invalid-feedback">
+                Please enter a valid email address.
+              </div>
+            </div>
+            <div class="mb-3 password-container">
+              <label for="pass" class="form-label">Password</label>
+              <input type="password" class="form-control" name="password" id="pass" placeholder="Enter Password" required>
+              <span class="eye" onclick="showPassword()">
+                <i class="fas fa-eye"></i>
+              </span>
+              <div class="invalid-feedback">
+                Please enter a password.
+              </div>
+            </div>
+            <div class="mb-3">
+              <a href="/forgot-password" class="text-primary text-decoration-none">Forgot Password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and Popper.js -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Password toggle functionality
+    const showPassword = () => {
+      const pass = document.getElementById('pass');
+      const icon = document.querySelector('.eye i');
+      if (pass.type === 'password') {
+        pass.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        pass.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    };
+
+    // Bootstrap form validation
+    (function () {
+      'use strict';
+      const forms = document.querySelectorAll('.needs-validation');
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+
+    // Sound toggle functionality
+    function toggleSound(videoId, button) {
+      const video = document.getElementById(videoId);
+      const icon = button.querySelector('i');
+      const label = button.querySelector('span');
+
+      if (video) {
+        video.muted = !video.muted;
+        console.log(`Toggling sound for ${videoId}: muted = ${video.muted}`);
+
+        if (video.muted) {
+          icon.classList.replace('fa-volume-up', 'fa-volume-mute');
+          label.textContent = 'Enable Sound';
+        } else {
+          icon.classList.replace('fa-volume-mute', 'fa-volume-up');
+          label.textContent = 'Mute Sound';
+        }
+
+        // Attempt to play the video if it's not already playing
+        if (video.paused) {
+          video.play().catch(error => {
+            console.error(`Error playing video ${videoId}:`, error);
+            alert('Unable to play video. Please interact with the page first (e.g., click anywhere).');
+          });
+        }
+      } else {
+        console.error(`Video element with ID ${videoId} not found`);
+      }
+    }
+
+    // Ensure only the active carousel video plays
+    document.addEventListener('DOMContentLoaded', () => {
+      const carousel = document.getElementById('carouselExample');
+      carousel.addEventListener('slide.bs.carousel', (event) => {
+        const videos = document.querySelectorAll('.carousel-item video');
+        videos.forEach(video => {
+          video.pause();
+          video.currentTime = 0; // Reset to start
+          video.muted = true; // Ensure muted on slide change
+          const button = video.parentElement.querySelector('.sound-toggle-btn');
+          if (button) {
+            button.querySelector('i').classList.replace('fa-volume-up', 'fa-volume-mute');
+            button.querySelector('span').textContent = 'Enable Sound';
+          }
+        });
+
+        const activeVideo = event.relatedTarget.querySelector('video');
+        if (activeVideo) {
+          activeVideo.play().catch(error => {
+            console.error('Error auto-playing video:', error);
+          });
+        }
+      });
+    });
+  </script>
+
+  <%- include("partials/footer.ejs") %>
+</body>
+</html>

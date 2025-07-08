@@ -4,12 +4,13 @@ import path from 'path'
 import { dirname } from 'path';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-// import  axois from 'axois';
+
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import multer from 'multer';
 // to download database 
 import { Parser } from 'json2csv';
+
 // to download in excel format
 import ExcelJS from 'exceljs';
 import session from 'express-session';
@@ -25,11 +26,11 @@ import rateLimit from 'express-rate-limit';
 
 
 
-const loginLimiter = rateLimit({
-  windowMs: 3* 60 * 1000, 
-  max: 3,
-  message: 'Too many login attempts, please try again later.'
-});
+// const loginLimiter = rateLimit({
+//   windowMs: 3* 60 * 1000, 
+//   max: 3,
+//   message: 'Too many login attempts, please try again later.'
+// });
 
 
 const transporter =nodemailer.createTransport({
@@ -169,12 +170,12 @@ app.get('/logout', async (req,res)=>{
   })
 
 
-app.get('/', (req, res) => {
-  const success = req.query.success || null;
-  const error = req.query.error || null;
+// app.get('/', (req, res) => {
+//   const success = req.query.success || null;
+//   const error = req.query.error || null;
 
-  res.render('home', { success, error });
-});
+//   res.render('home', { success, error });
+// });
 
 
 
@@ -203,10 +204,12 @@ app.get('/delete-users', isAuthenticated, requireAdmin, async (req, res) => {
 });
 
 // New DELETE route for users
+
 app.delete('/delete-users/:id', isAuthenticated, requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     // Prevent admin from deleting themselves
+
     if (parseInt(id) === parseInt(req.session.user.id)) {
       return res.redirect('/delete-users?error=Cannot delete your own account');
     }
@@ -234,28 +237,27 @@ app.get('/add', isAuthenticated, (req,res)=>{
   res.render('add.ejs',{users: req.session.user})
 })
 
-// app.get('/manage-data',(req,res)=>{
-//   res.render('manage-data.ejs')
-// })
-
-// app.get('/activities', isAuthenticated, (req,res)=>{
-//   res.render('activities.ejs')
-// })
+ 
 
 app.get('/activities', isAuthenticated, requireAdmin, async (req, res) => {
+
   try {
     const logs = await db.query('SELECT * FROM activity_logs ORDER BY timestamp DESC');
-    res.render('activities.ejs', { logs: logs.rows });
+
+    res.render('activities.ejs',
+       { 
+          logs: logs.rows,
+          users: req.session.users
+       });
+
+
   } catch (err) {
     console.error('Error fetching activity logs:', err);
     res.status(500).send('Error fetching logs');
   }
 });
 
-
-// app.get('/dashboard',(req,res)=>{
-//   res.render('dashboard.ejs')
-// })
+ 
 
 // map route 
 app.get('/map',(req,res)=>{
@@ -268,12 +270,14 @@ app.get('/submit',isAuthenticated, (req,res)=>{
   res.render('dashbaord.ejs')
 })
 
-app.post('/submit',passcode, isAuthenticated,loginLimiter,
+app.post('/submit',passcode, isAuthenticated,
    async (req,res)=>{
   try {
     const nssResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role = $1',['nss']);
     const staffResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role =$1',['user'] );
 
+     const dataResults = await db.query('SELECT * FROM data ORDER BY id ASC');
+    console.log('Data fetched for dashboard:', dataResults.rows);
 
     const totalCount = parseInt(nssResults.rows[0].count) + parseInt(staffResults.rows[0].count);
     const usersResults = await db.query('SELECT id, email, image, user_name FROM users ');
@@ -283,9 +287,32 @@ app.post('/submit',passcode, isAuthenticated,loginLimiter,
       totalMembers: totalCount,
     };
 
+
+    const sanitizedData = dataResults.rows.map(row => ({
+      id: row.id || null,
+      day: row.day || null,
+      mm: row.mm || null,
+      year: row.year || null,
+      minute: row.minute || null,
+      second: row.second || null,
+      hr: row.hr || null,
+      latitude: row.latitude || null,
+      longitude: row.longitude || null,
+      h: row.h || null,
+      mb: row.mb || null,
+      ml: row.ml || null,
+      az: row.az || null,
+      location: row.location === 'GH' ? 'Ghana' : row.location || null,
+      nearest_location: row.nearest_location || null
+    }));
+
     await logActivity(req.session.user, 'View Dashboard', 'User accessed dashboard');
 
-    res.render('dashboard.ejs',{ metrics, users: req.users})
+    res.render('dashboard.ejs',
+      { metrics,
+        users: req.users,
+        data: dataResults.rows
+    })
 
   } catch (err) {
     console.error('Error fetching data for dashboard:', err);
@@ -300,7 +327,7 @@ app.post('/submit',passcode, isAuthenticated,loginLimiter,
 
 
 app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
-  // const hashedPassword = await bcrypt.hash(password, 10);
+
   const {id,password,email,name,role} =req.body;
   const image = req.file ? `/uploads/${req.file.filename}`: null;
   const hashedPassword =await bcrypt.hash(password,10)
@@ -309,7 +336,7 @@ app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
     await db.query(`INSERT INTO users (id,password,email,image,user_name,role)
        VALUES
        ($1,$2,$3,$4,$5,$6)`
-       ,[id,hashedPassword,email,image,name,role]);
+       ,[id,password,email,image,name,role]);
 
        await logActivity(req.session.user, 'Create User', `User ${email} added`);
 
@@ -320,63 +347,14 @@ app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
   }
 })
 
-// event handling
-// app.post('/events', async (req,res)=>{
-//   const {
-//     id,
-//     day,
-//     // Hour,
-//     minute,
-//     second,
-//     latitude,
-//     longitude,
-//     H,
-//     Mb,
-//     Ml,
-//     Az,
-//     location,
-//     nearest_location} =req.body;
-
-//     if (
-//       day === null || minute === null ||
-//       second === null || latitude === null || longitude === null ||
-//       H === null || Mb === null || Ml === null || Az === null ||
-//       location === null || nearest_location === null
-//     ) {
-//       return res.status(400).send('All fields must be filled out.'); 
-//     }
-
-//   try {
-//     await db.query(`INSERT INTO data 
-//       (id,day,minute,second,latitude,longitude,h,mb,ml,az,location,nearest_location) VALUES ON CONFLICT (id) DO UPDATE  SET(
-//         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,[
-//           id,
-//           day,
-//           minute,
-//           second,
-//           latitude,
-//           longitude,
-//           H,
-//           Mb,
-//           Ml,
-//           Az,
-//           location,
-//           nearest_location
-//         ]);
-//         res.redirect('/add')
-//   } catch (err) {
-//     console.error('Error inserting data',err);
-//     // console.status(500).send('Error saving data')
-//   }
-// });
-
-
+ 
 
 app.post('/events', async (req, res) => {
   const {
     id,
     day,
     month,
+    year,
     minute,
     second,
     hour,
@@ -391,7 +369,7 @@ app.post('/events', async (req, res) => {
   } = req.body;
 
   if (
-    !id || !day || !month || !minute || !second || !hour ||
+    !id || !day || !month || !year || !minute || !second || !hour ||
     !latitude || !longitude || !H || !Mb ||
     !Ml || !Az || !location || !nearest_location
   ) {
@@ -401,13 +379,14 @@ app.post('/events', async (req, res) => {
   try {
     await db.query(`
       INSERT INTO data (
-        id, day, mm, minute, second, hr, latitude, longitude, h, mb, ml, az, location, nearest_location
+        id, day, mm, year, minute, second, hr, latitude, longitude, h, mb, ml, az, location, nearest_location
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14,$15
       )
       ON CONFLICT (id) DO UPDATE SET
         day = EXCLUDED.day,
         mm = EXCLUDED.mm,
+        year = EXCLUDED.year,
         minute = EXCLUDED.minute,
         second = EXCLUDED.second,
         hr = EXCLUDED.hr,
@@ -423,6 +402,7 @@ app.post('/events', async (req, res) => {
       id,
       day,
       month,
+      year,
       minute,
       second,
       hour,
@@ -450,7 +430,7 @@ app.post('/events', async (req, res) => {
 
 app.get('/manage-data',isAuthenticated, async (req,res)=>{
   try {
-    const results =await db.query(`SELECT * FROM data`);
+    const results =await db.query(`SELECT * FROM data ORDER BY id ASC`);
     console.log('Fetched events:', results.rows);
     res.render('manage-data.ejs',
       {
@@ -465,34 +445,7 @@ app.get('/manage-data',isAuthenticated, async (req,res)=>{
   }
 })
 
-// app.get('/search',async (req,res)=>{
-//   const {query} =req.query;
-//   try {
-//     const results =await db.query(
-//       `SELECT * FROM data WHERE 
-//         TO_CHAR(day, 'YYYY-MM-DD') ILIKE $1
-//         OR TO_CHAR(day, 'YYYY') ILIKE $1
-//         OR TO_CHAR(day, 'MM') ILIKE $1
-//         OR TO_CHAR(day, 'DD') ILIKE $1
-//         OR CAST(minute AS TEXT) ILIKE $2
-//         OR CAST(second AS TEXT) ILIKE $3
-//         OR CAST(latitude AS TEXT) ILIKE $4
-//         OR CAST(longitude AS TEXT) ILIKE $5
-//         OR CAST(h AS TEXT) ILIKE $6
-//         OR CAST(mb AS TEXT) ILIKE $7
-//         OR CAST(ml AS TEXT) ILIKE $8
-//         OR CAST(az AS TEXT) ILIKE $9
-//         OR location ILIKE $10
-//         OR nearest_location ILIKE $11`,
-//         [`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`,`%${query}%`]
-//     )
-//     res.render("manage-data.ejs",{data:results.rows})
-//   } catch (err) {
-//     console.error('Error fetching data',err)
-//     res.status(500).send('error on user end');
-//   }
-// });
-
+ 
 
 app.get('/search', async (req, res) => {
   const { query, column } = req.query;
@@ -514,12 +467,14 @@ app.get('/search', async (req, res) => {
   }
 
   // Define valid columns to prevent postgrSQL injection
+
   const validColumns = [
-    'id', 'day', 'mm', 'minute', 'second', 'hr', 'latitude', 'longitude',
+    'id', 'day', 'mm','year', 'minute', 'second', 'hr', 'latitude', 'longitude',
     'h', 'mb', 'ml', 'az', 'location', 'nearest_location'
   ];
 
   // Default to searching all columns if no specific column is provided
+
   let sqlQuery = '';
   let queryParams = [];
 
@@ -534,6 +489,7 @@ app.get('/search', async (req, res) => {
         id::TEXT = $1 OR
         day::TEXT = $1 OR
         mm = $1 OR
+        year::TEXT = $1 OR
         minute::TEXT = $1 OR
         second::TEXT = $1 OR
         hr::TEXT = $1 OR
@@ -568,16 +524,40 @@ app.get('/search', async (req, res) => {
 app.get('/dashboard',isAuthenticated, async (req, res) => {
   try {
     const userResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE email = $1', ['active']);
-    const nssResults = await db.query('SELECT COUNT(*) AS count FROM users');
-    const staffResults = await db.query('SELECT COUNT(*) AS count FROM users' );
+    const nssResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role =$1 ', ['nss']);
+    const staffResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role = $1 ', [ 'user'] );
     const totalResults = await db.query('SELECT COUNT(*) AS count FROM users');
+
+    const dataResults = await db.query('SELECT * FROM data ORDER BY id ASC');
+    console.log('Data fetched for dashboard:', dataResults.rows);
 
     const metrics = {
       activeMembers: userResults.rows[0].count,
       nssPersonnel: nssResults.rows[0].count,
       staffMembers: staffResults.rows[0].count,
       totalMembers: totalResults.rows[0].count,
+
+      
     };
+
+
+    const sanitizedData = dataResults.rows.map(row => ({
+      id: row.id || null,
+      day: row.day || null,
+      mm: row.mm || null,
+      year: row.year || null,
+      minute: row.minute || null,
+      second: row.second || null,
+      hr: row.hr || null,
+      latitude: row.latitude || null,
+      longitude: row.longitude || null,
+      h: row.h || null,
+      mb: row.mb || null,
+      ml: row.ml || null,
+      az: row.az || null,
+      location: row.location || null,
+      nearest_location: row.nearest_location || null
+    }));
 
     await logActivity(req.session.user, 'Access Dashboard', 'User accessed dashboard');
 
@@ -585,7 +565,9 @@ app.get('/dashboard',isAuthenticated, async (req, res) => {
     const usersResults = await db.query('SELECT id, email, image,user_name FROM users');
 
 
-    res.render('dashboard.ejs', { metrics, users:usersResults.rows });
+    res.render('dashboard.ejs', { metrics, users:usersResults.rows,
+    data: sanitizedData 
+     });
   } catch (err) {
     console.error('Error fetching data for dashboard:', err);
     res.status(500).send('Error loading dashboard');
@@ -593,34 +575,7 @@ app.get('/dashboard',isAuthenticated, async (req, res) => {
 });
 
 
-// patch handling
-// app.patch('/data/:id',async (req,res)=>{
-//   const {id} =req.params;
-//   const {day,minute,second,latitude,longitude,H,Mb,Ml,Az,location,nearest_location} = req.body;
-//   try {
-//      await db.query (`UPDATE data SET day=$1, minute=$2, second =$3, latitude=$4 , longitude=$5,  h=$6 ,mb=$7 , ml=$8 , az=$9, location=$10, nearest_location=$11 WHERE id=$12`,[
-//       day,
-//       minute,
-//       second,
-//       latitude,
-//       longitude,
-//       H,
-//       Mb,
-//       Ml,
-//       Az,
-//       location,
-//       nearest_location,
-//       id
-//     ])
-//     res.json({ success: true, message: 'Data updated successfully' });
-//   } catch (err) {
-//     console.log(' Error updating data',err);
-//     res.status(500).send('Click the patch to update');
-//   }
-// })
-
-
-
+ 
 
 app.delete('/data/:id', async (req, res) => {
   const { id } = req.params;
@@ -781,18 +736,19 @@ app.post('/upload-data', upload.single('upload'), async (req, res) => {
           const rowData = {
             id: safeNumber(row.__EMPTY),
             mm: safeString(rawMM) || 'NOV', // Default to 'NOV' if missing
-            day: safeNumber(row.__EMPTY_1),
-            hr: safeNumber(row.__EMPTY_2),
-            minute: safeNumber(row.__EMPTY_3),
-            second: safeNumber(row.__EMPTY_4),
-            latitude: safeNumber(row.__EMPTY_5),
-            longitude: safeNumber(row.__EMPTY_6),
+            year: safeNumber(row__EMPTY_1),
+            day: safeNumber(row.__EMPTY_2),
+            hr: safeNumber(row.__EMPTY_3),
+            minute: safeNumber(row.__EMPTY_4),
+            second: safeNumber(row.__EMPTY_5),
+            latitude: safeNumber(row.__EMPTY_6),
+            longitude: safeNumber(row.__EMPTY_7),
             h: safeNumber(rawH),
             mb: safeNumber(rawMb),
-            ml: safeNumber(row.__EMPTY_9),
-            az: safeNumber(row.__EMPTY_10),
-            location: safeString(row.__EMPTY_11),
-            nearest_location: safeString(row.__EMPTY_12)
+            ml: safeNumber(row.__EMPTY_10),
+            az: safeNumber(row.__EMPTY_11),
+            location: safeString(row.__EMPTY_12),
+            nearest_location: safeString(row.__EMPTY_13)
           };
 
           // Log warnings for invalid values
@@ -825,7 +781,7 @@ async function insertRows(rows, req, res) {
 
     for (const row of rows) {
       const {
-        id, day, mm, minute, second, hr,
+        id, day, mm, year, minute, second, hr,
         latitude, longitude, h, mb, ml, az,
         location, nearest_location
       } = row;
@@ -837,7 +793,7 @@ async function insertRows(rows, req, res) {
         continue;
       }
       if (
-        !day || !minute || !second || !hr ||
+        !day || !year || !minute || !second || !hr ||
         !latitude || !longitude || !isFinite(h) || !isFinite(mb) || !az ||
         !location || !nearest_location
       ) {
@@ -851,6 +807,7 @@ async function insertRows(rows, req, res) {
         id: parseInt(id, 10),
         day: parseInt(day, 10),
         mm,
+        year: parseInt(year, 10),
         minute: parseInt(minute, 10),
         second: parseFloat(second),
         hr: parseInt(hr, 10),
@@ -866,15 +823,16 @@ async function insertRows(rows, req, res) {
 
       await db.query(`
         INSERT INTO data (
-          id, day, mm, minute, second, hr,
+          id, day, mm, year, minute, second, hr,
           latitude, longitude, h, mb, ml, az,
           location, nearest_location
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,$15
         )
         ON CONFLICT (id) DO UPDATE SET
           day = EXCLUDED.day,
           mm = EXCLUDED.mm,
+          year = EXCLUDED.year,
           minute = EXCLUDED.minute,
           second = EXCLUDED.second,
           hr = EXCLUDED.hr,
@@ -887,7 +845,7 @@ async function insertRows(rows, req, res) {
           location = EXCLUDED.location,
           nearest_location = EXCLUDED.nearest_location
       `, [
-        cleanedRow.id, cleanedRow.day, cleanedRow.mm, cleanedRow.minute,
+        cleanedRow.id, cleanedRow.day, cleanedRow.mm, cleanedRow.year, cleanedRow.minute,
         cleanedRow.second, cleanedRow.hr, cleanedRow.latitude, cleanedRow.longitude,
         cleanedRow.h, cleanedRow.mb, cleanedRow.ml, cleanedRow.az,
         cleanedRow.location, cleanedRow.nearest_location
@@ -1055,6 +1013,90 @@ app.post('/reset-password/:token', async (req, res) => {
 });
 
 
+
+
+// working on new fields 
+app.get('/',(req,res)=>{
+    const success = req.query.success || null;
+    const error = req.query.error || null;
+  res.render('edit-home',{success, error})
+});
+
+
+
+
+// Serve CSV template
+app.get('/download-template-csv', (req, res) => {
+  const templatePath = path.join(__dirname, 'public', 'data_template.csv');
+  res.download(templatePath, 'data_template.csv', (err) => {
+    if (err) {
+      console.error('Error serving CSV template:', err);
+      res.status(500).send('Error downloading template');
+    }
+  });
+});
+
+// Serve Excel template
+app.get('/download-template-excel', async (req, res) => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Data Template');
+
+    // Define headers
+    worksheet.columns = [
+      { header: 'id', key: 'id', width: 10 },
+      { header: 'day', key: 'day', width: 10 },
+      { header: 'mm', key: 'mm', width: 10 },
+      { header: 'year', key: 'year', width: 10 },
+      { header: 'minute', key: 'minute', width: 10 },
+      { header: 'second', key: 'second', width: 10 },
+      { header: 'hr', key: 'hr', width: 10 },
+      { header: 'latitude', key: 'latitude', width: 15 },
+      { header: 'longitude', key: 'longitude', width: 15 },
+      { header: 'h', key: 'h', width: 10 },
+      { header: 'mb', key: 'mb', width: 10 },
+      { header: 'ml', key: 'ml', width: 10 },
+      { header: 'az', key: 'az', width: 10 },
+      { header: 'location', key: 'location', width: 20 },
+      { header: 'nearest_location', key: 'nearest_location', width: 20 }
+    ];
+
+    // Add sample row
+    worksheet.addRow({
+      id: 1,
+      day: 15,
+      mm:'NOV',
+      year: 2025,
+      minute: 30,
+      second: 45.5,
+      hr: 14,
+      latitude: 5.12345,
+      longitude: -1.23456,
+      h: 10.0,
+      mb: 4.5,
+      ml: 4.2,
+      az: 90,
+      location: 'Ghana',
+      nearest_location: 'Accra'
+    });
+
+    // Set headers for Excel file
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="data_template.xlsx"'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Error generating Excel template:', err);
+    res.status(500).send('Error downloading template');
+  }
+});
 
 
 

@@ -3,14 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NDC-GAEC-dashboard</title>
-  <link rel="stylesheet" href="/styles/dashboard.css">
+  <title>NDC-GAEC Dashboard</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/styles/dashboard.css">
+  <style>
+    .map-container {
+      position: relative;
+      height: 820px;
+    }
+    #map {
+      height: 100%;
+    }
+    #coords {
+      position: absolute;
+      bottom: 20px;
+      left: 10px;
+      background: hsla(240, 69%, 56%, 0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      z-index: 1000;
+      max-width: 200px;
+      color: white;
+    }
+    .year-filter {
+      margin-bottom: 3px;
+      max-width: 100px; /* Adjusted for better visibility */
+    }
+    .data-display, .bar-chart {
+      position: relative;
+      min-height: 350px; /* Ensure space for charts */
+    }
+    .no-data-message {
+      color: #ff0000;
+      font-style: italic;
+    }
+  </style>
 </head>
 <body>
   <div class="main-dashboard">
-    <div class="dh-menu">
+    <div class="dh-menu" id="sidebar">
       <div class="menu-links">
         <% if (users && users.role === 'admin') { %>
           <a href="/user">Manage User</a>
@@ -19,74 +61,250 @@
         <a href="/manage-data">Manage Data</a>
         <% if (users && users.role === 'admin') { %>
           <a href="/activities">User Activities</a>
-        <% } %>   
-         <a href="/map">Map</a>
+        <% } %>
+        <a href="/map" target="_blank">Map</a>
         <a href="/logout">Logout</a>
       </div>
     </div>
-    <div class="dh-nav-content">
-      <div class="dh-nav">
-          <div class="profile">
-            <img src="<%= users.image %>" alt="">
-            <h5>Welcome, <%= users.user_name%></h5>
-        </div>
-      </div>
-      <div class="user-pro-grh">
-        <div class="user">
-        <img src="<%= users.image %>" alt="">
-        </div>
-        <div class="graph">
-         <p>Email  :   <%= users.email %></p>
-         <p> ID Number : <%= users.id %></p>
-        </div>
-      </div>
-      <div class="dh-content">
-        <div class="event-grid">
-          <div class="grid-in">
-            <div>
-              <p>NSS PERSONNEL</p>
-              <li><%= metrics.nssPersonnel %></li>
-            </div>
-            <div><i class="fa-solid fa-users-gear"></i></div>
-          </div>
-          <div class="grid-in">
-            <div>
-              <p>STAFF MEMBERS</p>
-              <li><%= metrics.staffMembers %></li>
-            </div>
-            <div>
-              <i class="fa-solid fa-users-gear"></i>
-            </div>
-          </div>
-          <div class="grid-in">
-            <div>
-              <p>TOTAL MEMBERS</p>
-              <li><%= metrics.totalMembers %></li>
-            </div>
-            <div><i class="fa-solid fa-users-gear"></i></div>
-          </div>
-          <div class="grid-in">
-            <div>
-              <a href="https://www.ctbto.org/">CTBTO</a>
-            </div>
-            <div><i class="fa-solid fa-right-left"></i></div>
-          </div>
-          <div class="grid-in">
-            <div>
-              <a href="https://gaec.gov.gh/">GAEC</a>
-            </div>
-            <div><i class="fa-solid fa-arrow-left"></i></div>
-          </div>
-          <div class="grid-in">
-            <div>
-              <a href="/">HOME PAGE</a>
-            </div>
-            <div><i class="fa-solid fa-arrow-left"></i></div>
-          </div>
-        </div>
 
+    <div class="dh-nav-content" id="content">
+      <div class="dh-nav">
+        <button class="btn btn-outline-light" id="toggleSidebar" aria-label="Toggle Sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="profile">
+          <img src="<%= users && users.image ? users.image : '/images/default-profile.jpg' %>" alt="Profile Picture">
+          <h5>Welcome, <%= users && users.user_name ? users.user_name : 'Guest' %></h5>
+        </div>
+      </div>
+
+      <div class="dh-content">
+        <div class="content-row">
+          <div class="map-container">
+            <div id="map"></div>
+            <div id="coords">Click on the map to get coordinates and location</div>
+          </div>
+
+          <div class="right-column">
+            <div class="data-display">
+              <!-- <h3>Events Pie Chart</h3> -->
+              <select id="yearFilter" class="form-select year-filter">
+                <option value="">All Years</option>
+                <% 
+                  const years = [...new Set(data.map(item => item.year).filter(year => year != null))].sort((a, b) => a - b);
+                  years.forEach(year => {
+                %>
+                  <option value="<%= year %>"><%= year %></option>
+                <% }) %>
+              </select>
+              <canvas id="pieChart" style="margin-bottom: 32px;"></canvas>
+            </div>
+
+            <div class="bar-chart">
+              <h3>Event Magnitudes</h3>
+              <canvas id="barChart"></canvas>
+            </div>
+
+            <div class="event-grid-container">
+              <% if (typeof users !== 'undefined' && users && users.role === 'admin') { %>
+              <div class="event-grid">
+                <div class="grid-in">
+                  <div><p>NSS PERSONNEL</p><li><%= metrics?.nssPersonnel || 0 %></li></div>
+                </div>
+                <div class="grid-in">
+                  <div><p>STAFF MEMBERS</p><li><%= metrics?.staffMembers || 0 %></li></div>
+                </div>
+                <div class="grid-in">
+                  <div><p>TOTAL MEMBERS</p><li><%= metrics?.totalMembers || 0 %></li></div>
+                </div>
+              </div>
+              <% } %>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+  <script>
+    // Initialize map
+    const map = L.map('map').setView([8.7832, 34.5085], 4); // Default center
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    const terrain = L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg');
+    const baseMaps = { "OpenStreetMap": osm, "Satellite": satellite, "Terrain": terrain };
+    L.control.layers(baseMaps).addTo(map);
+
+    // Map click handler for coordinates
+    let marker;
+    const geocoder = L.Control.geocoder({
+      defaultMarkGeocode: false
+    }).on('markgeocode', function(e) {
+      const center = e.geocode.center;
+      const name = e.geocode.name || 'Unknown location';
+      map.fitBounds(e.geocode.bbox);
+      if (marker) {
+        marker.setLatLng(center);
+      } else {
+        marker = L.marker(center).addTo(map);
+      }
+      document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}, Location: ${name}`;
+      marker.bindPopup(`<strong>Location:</strong> ${name}<br>Latitude: ${center.lat.toFixed(5)}<br>Longitude: ${center.lng.toFixed(5)}`).openPopup();
+    }).addTo(map);
+
+    map.on('click', function(e) {
+      const { lat, lng } = e.latlng;
+      document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
+      if (marker) {
+        marker.setLatLng(e.latlng);
+      } else {
+        marker = L.marker(e.latlng).addTo(map);
+      }
+      L.Control.Geocoder.nominatim().reverse(e.latlng, map.options.crs.scale(map.getZoom()), function(results) {
+        const name = results[0]?.name || 'Unknown location';
+        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${name}`;
+        marker.bindPopup(`<strong>Location:</strong> ${name}<br>Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}`).openPopup();
+      });
+    });
+
+    // Sidebar toggle
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+      document.getElementById('content').classList.toggle('collapsed');
+    });
+
+    // Chart and map initialization
+    let pieChartInstance = null;
+    let barChartInstance = null;
+    let eventMarkers = L.layerGroup().addTo(map); // Layer group for event markers
+    const data = <%- JSON.stringify(data) %>;
+    const africanCountries = [
+      'ALGERIA','ANGOLA','BENIN','BOTSWANA','BURKINA FASO','BURUNDI','CAPE VERDE','CAMEROON','CENTRAL AFRICAN REPUBLIC',
+      'CHAD','COMOROS','CONGO','DR CONGO','DJIBOUTI','EGYPT','EQUATORIAL GUINEA','ERITREA','ESWATINI','ETHIOPIA',
+      'GABON','GAMBIA','GHANA','GUINEA','GUINEA-BISSAU','IVORY COAST','KENYA','LESOTHO','LIBERIA','LIBYA',
+      'MADAGASCAR','MALAWI','MALI','MAURITANIA','MAURITIUS','MOROCCO','MOZAMBIQUE','NAMIBIA','NIGER','NIGERIA',
+      'RWANDA','SAO TOME and Principe','SENEGAL','SEYCHELLES','SIERRA LEONE','SOMALIA','SOUTH AFRICA','SOUTH SUDAN',
+      'SUDAN','TANZANIA','TOGO','TUNISIA','UGANDA','ZAMBIA','ZIMBABWE'
+    ];
+
+    function updateChartsAndMap(selectedYear) {
+      // Clear existing markers and charts
+      eventMarkers.clearLayers();
+      if (pieChartInstance) pieChartInstance.destroy();
+      if (barChartInstance) barChartInstance.destroy();
+
+      // Filter data based on selected year
+      const filteredData = selectedYear ? data.filter(item => item.year == selectedYear) : data;
+      const africanData = filteredData.filter(item => africanCountries.includes(item.location?.toUpperCase()));
+
+      // Update Pie Chart
+      const locationCounts = africanData.reduce((acc, item) => {
+        acc[item.location] = (acc[item.location] || 0) + 1;
+        return acc;
+      }, {});
+      const labels = Object.keys(locationCounts);
+      const values = Object.values(locationCounts);
+
+      const pieChartCanvas = document.getElementById('pieChart');
+      const pieChartContainer = document.querySelector('.data-display');
+      const noPieDataMessage = pieChartContainer.querySelector('.no-data-message');
+      if (noPieDataMessage) noPieDataMessage.remove();
+
+      if (labels.length === 0) {
+        pieChartCanvas.style.display = 'none';
+        pieChartContainer.innerHTML += '<p class="no-data-message">No African data available for the pie chart.</p>';
+      } else {
+        pieChartCanvas.style.display = 'block';
+        const ctx = pieChartCanvas.getContext('2d');
+        pieChartInstance = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: ['#ff6384','#36a2eb','#ffce56','#4bc0c0','#9966ff','#ff9f40','#e9a9a6','#8bc34a'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'left' },
+              title: { display: true, text: `Events by African Country${selectedYear ? ' (' + selectedYear + ')' : ''}` }
+            }
+          }
+        });
+      }
+
+      // Update Map Markers
+      africanData.forEach(event => {
+        if (event.latitude && event.longitude) {
+          const lat = parseFloat(event.latitude);
+          const lng = parseFloat(event.longitude);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const eventMarker = L.marker([lat, lng]).addTo(eventMarkers);
+            eventMarker.bindPopup(`<strong>${event.location}</strong><br>Latitude: ${event.latitude || 'N/A'}<br>Longitude: ${event.longitude}<br>Year: ${event.year || 'N/A'}`);
+          }
+        }
+      });
+
+      // Update Bar Chart
+      const barLabels = filteredData.map(item => item.id.toString());
+      const magnitudes = filteredData.map(item => item.mb || 0);
+      const barChartCanvas = document.getElementById('barChart');
+      const barChartContainer = document.querySelector('.bar-chart');
+      const noBarDataMessage = barChartContainer.querySelector('.no-data-message');
+      if (noBarDataMessage) noBarDataMessage.remove();
+
+      if (magnitudes.length === 0 || magnitudes.every(val => val === 0)) {
+        barChartCanvas.style.display = 'none';
+        barChartContainer.innerHTML += '<p class="no-data-message">No magnitude data available for the bar chart.</p>';
+      } else {
+        barChartCanvas.style.display = 'block';
+        const barCtx = barChartCanvas.getContext('2d');
+        barChartInstance = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: barLabels,
+            datasets: [{
+              label: 'Event Magnitude (mb)',
+              data: magnitudes,
+              backgroundColor: 'rgba(54, 162, 235, 0.7)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Magnitude (mb)' } },
+              x: { title: { display: true, text: 'Event ID' } }
+            },
+            plugins: {
+              legend: { display: true, position: 'top' },
+              title: { display: true, text: `Event Magnitudes by ID${selectedYear ? ' (' + selectedYear + ')' : ''}` }
+            }
+          }
+        });
+      }
+    }
+
+    // Initial render
+    updateChartsAndMap('');
+
+    // Year filter change event
+    document.getElementById('yearFilter').addEventListener('change', function() {
+      const selectedYear = this.value;
+      updateChartsAndMap(selectedYear);
+    });
+  </script>
 </body>
 </html>
