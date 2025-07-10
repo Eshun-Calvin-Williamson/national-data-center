@@ -18,7 +18,7 @@
   <style>
     .map-container {
       position: relative;
-      height: 820px;
+      height: 720px;
     }
     #map {
       height: 100%;
@@ -42,7 +42,7 @@
     }
     .data-display, .bar-chart {
       position: relative;
-      min-height: 350px; /* Ensure space for charts */
+      min-height: 300px; /* Ensure space for charts */
     }
     .no-data-message {
       color: #ff0000;
@@ -109,13 +109,13 @@
               <% if (typeof users !== 'undefined' && users && users.role === 'admin') { %>
               <div class="event-grid">
                 <div class="grid-in">
-                  <div><p>NSS PERSONNEL</p><li><%= metrics?.nssPersonnel || 0 %></li></div>
+                  <div><p style="color: black;" >NSS PERSONNEL</p><li><%= metrics?.nssPersonnel || 0 %></li></div>
                 </div>
                 <div class="grid-in">
-                  <div><p>STAFF MEMBERS</p><li><%= metrics?.staffMembers || 0 %></li></div>
+                  <div><p style="color: black;">STAFF MEMBERS</p><li><%= metrics?.staffMembers || 0 %></li></div>
                 </div>
                 <div class="grid-in">
-                  <div><p>TOTAL MEMBERS</p><li><%= metrics?.totalMembers || 0 %></li></div>
+                  <div><p style="color: black">TOTAL MEMBERS</p><li><%= metrics?.totalMembers || 0 %></li></div>
                 </div>
               </div>
               <% } %>
@@ -255,47 +255,94 @@
         }
       });
 
-      // Update Bar Chart
-      const barLabels = filteredData.map(item => item.id.toString());
-      const magnitudes = filteredData.map(item => item.mb || 0);
-      const barChartCanvas = document.getElementById('barChart');
-      const barChartContainer = document.querySelector('.bar-chart');
-      const noBarDataMessage = barChartContainer.querySelector('.no-data-message');
-      if (noBarDataMessage) noBarDataMessage.remove();
+  // Update Bar Chart
+  const magnitudeRanges = [
+  { label: 'Micro: 1.0–1.9',
+   min: 1.0, max: 1.9 },
+  { label: 'Minor: 2.0–2.9',
+   min: 2.0, max: 2.9 },
+  { label: 'Slight: 3.0–3.9',
+   min: 3.0, max: 3.9 },
+  { label: 'Light: 4.0–4.9',
+   min: 4.0, max: 4.9 },
+  { label: 'Mistrals: 5.0–5.9',
+   min: 5.0, max: 5.9 },
+  { label: 'Strong: 6.0–6.9',
+   min: 6.0, max: 6.9 }
+];
 
-      if (magnitudes.length === 0 || magnitudes.every(val => val === 0)) {
-        barChartCanvas.style.display = 'none';
-        barChartContainer.innerHTML += '<p class="no-data-message">No magnitude data available for the bar chart.</p>';
-      } else {
-        barChartCanvas.style.display = 'block';
-        const barCtx = barChartCanvas.getContext('2d');
-        barChartInstance = new Chart(barCtx, {
-          type: 'bar',
-          data: {
-            labels: barLabels,
-            datasets: [{
-              label: 'Event Magnitude (mb)',
-              data: magnitudes,
-              backgroundColor: 'rgba(54, 162, 235, 0.7)',
-              borderColor: 'rgba(54, 162, 235, 1)',
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { beginAtZero: true, title: { display: true, text: 'Magnitude (mb)' } },
-              x: { title: { display: true, text: 'Event ID' } }
-            },
-            plugins: {
-              legend: { display: true, position: 'top' },
-              title: { display: true, text: `Event Magnitudes by ID${selectedYear ? ' (' + selectedYear + ')' : ''}` }
-            }
+// Count events in each magnitude range
+const counts = magnitudeRanges.map(range => {
+  return filteredData.reduce((count, item) => {
+    const mb = parseFloat(item.mb) || 0;
+    return mb >= range.min && mb <= range.max ? count + 1 : count;
+  }, 0);
+});
+
+// Extract labels for the x-axis with range numbers above words
+
+const barLabels = magnitudeRanges.map(range => {
+  const [word, rangeStr] = range.label.split(': ');
+  return [rangeStr, word]; // Creates a multi-line label: range on top, word below
+});
+
+// // Extract labels for the x-axis
+// const barLabels = magnitudeRanges.map(range => range.label);
+
+// Check if there’s any data to display
+const barChartCanvas = document.getElementById('barChart');
+const barChartContainer = document.querySelector('.bar-chart');
+const noBarDataMessage = barChartContainer.querySelector('.no-data-message');
+if (noBarDataMessage) noBarDataMessage.remove();
+
+if (counts.length === 0 || counts.every(val => val === 0)) {
+  barChartCanvas.style.display = 'none';
+  barChartContainer.innerHTML += '<p class="no-data-message">No magnitude data available for the bar chart.</p>';
+} else {
+  barChartCanvas.style.display = 'block';
+  const barCtx = barChartCanvas.getContext('2d');
+  if (barChartInstance) barChartInstance.destroy(); // Destroy existing chart instance if it exists
+  barChartInstance = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [{
+        label: 'Number of Events',
+        data: counts,
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Number of Events' },
+          ticks: {
+            maxTicksLimit: 6,
+            stepSize: Math.ceil(Math.max(...counts) / 5)
           }
-        });
+        },
+        x: {
+          title: { display: true, text: 'Magnitude Range (mb)' },
+          ticks: {
+            padding: 5
+          }
+        }
+      },
+      plugins: {
+        legend: { display: true, position: 'top' },
+        title: {
+          display: true,
+          text: `Event Counts by Magnitude Range${selectedYear ? ' (' + selectedYear + ')' : ''}`
+        }
       }
     }
+  });
+}}
 
     // Initial render
     updateChartsAndMap('');

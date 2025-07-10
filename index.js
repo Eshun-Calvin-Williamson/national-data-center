@@ -542,7 +542,7 @@ app.get('/dashboard',isAuthenticated, async (req, res) => {
 
 
     const sanitizedData = dataResults.rows.map(row => ({
-      id: row.id || null,
+      id: row.id,
       day: row.day || null,
       mm: row.mm || null,
       year: row.year || null,
@@ -668,7 +668,113 @@ app.get('/download-excel', async (req, res) => {
 // upload route 
 
 
-app.post('/upload-data', upload.single('upload'), async (req, res) => {
+// app.post('/upload-data', upload.single('upload'), async (req, res) => {
+//   if (!req.file) return res.status(400).send('No file uploaded.');
+
+//   const filePath = req.file.path;
+//   const ext = path.extname(filePath).toLowerCase();
+//   const rows = [];
+
+//   try {
+//     if (ext === '.csv') {
+//       const fs = await import('fs');
+//       fs.createReadStream(filePath)
+//         .pipe(csv())
+//         .on('data', (row) => {
+//           console.log('Parsed CSV row:', row);
+//           rows.push(row);
+//         })
+//         .on('end', async () => {
+//           console.log('All CSV rows:', rows);
+//           await insertRows(rows, req, res);
+//         });
+//     } else if (ext === '.xlsx' || ext === '.xls') {
+//       const workbook = xlsx.readFile(filePath);
+//       const sheetName = workbook.SheetNames[0];
+//       const sheet = workbook.Sheets[sheetName];
+//       const data = xlsx.utils.sheet_to_json(sheet, { defval: null });
+//       console.log('Parsed Excel data:', data);
+
+//       // Map Excel columns to expected fields
+//       const mappedRows = data
+//         .filter((row, index) => {
+//           // Skip the header row
+//           if (row.__EMPTY === 'ID' && row['EARTHQUAKES RECORDED IN AFRICA; NOVEMBER 2024'] === 'MM'){
+//             return false;
+//           }
+//           if (row.__EMPTY == null){
+//             console.warn(`Skipping row ${index + 2} with null id:`,row);
+//             return false;
+//           }
+//           return true;
+//         })
+//         .map((row, index) => {
+//           // Safely handle fields
+//           const safeString = (value) => {
+//             if (typeof value === 'string') return value.trim();
+//             if (value == null) return null;
+//             return isFinite(value) ? value.toString() : null;
+//           };
+
+//           const safeNumber = (value) => {
+//             if (value == null) return 0;
+//             if (typeof value === 'string') {
+//               const cleaned = value.replace(/f$/, '');
+//               return isFinite(cleaned) ? parseFloat(cleaned) : 0;
+//             }
+//             return isFinite(value) ? parseFloat(value) : 0;
+//           };
+
+//           // Debug the raw MM column value
+//           const rawMM = row['EARTHQUAKES RECORDED IN AFRICA; NOVEMBER 2024'];
+//           const rawH =row.__EMPTY_7;
+//           const rawMb = row.__EMPTY_8;
+//           if (rawH == null || rawMb == null) {
+//             console.warn(`Missing MM value in row ${index + 2}:`,{rawH,rawMb,row} );
+//           }
+
+//           const rowData = {
+//             id: safeNumber(row.__EMPTY),
+//             mm: safeString(rawMM) || 'NOV', // Default to 'NOV' if missing
+//             year: safeNumber(row.__EMPTY_1),
+//             day: safeNumber(row.__EMPTY_2),
+//             hr: safeNumber(row.__EMPTY_3),
+//             minute: safeNumber(row.__EMPTY_4),
+//             second: safeNumber(row.__EMPTY_5),
+//             latitude: safeNumber(row.__EMPTY_6),
+//             longitude: safeNumber(row.__EMPTY_7),
+//             h: safeNumber(rawH),
+//             mb: safeNumber(rawMb),
+//             ml: safeNumber(row.__EMPTY_10),
+//             az: safeNumber(row.__EMPTY_11),
+//             location: safeString(row.__EMPTY_12),
+//             nearest_location: safeString(row.__EMPTY_13)
+//           };
+
+//           // Log warnings for invalid values
+//           Object.entries(rowData).forEach(([key, value]) => {
+//             if (value === null && key !== 'ml') {
+//               console.warn(`Invalid ${key} in row ${index + 2}:`, row[key]);
+//             }
+//           });
+
+//           return rowData;
+//         });
+
+//       console.log('Mapped Excel rows:', mappedRows);
+//       await insertRows(mappedRows, req, res);
+//     } else {
+//       return res.status(400).send('Unsupported file format. Upload .csv or .xlsx only.');
+//     }
+//   } catch (err) {
+//     console.error('Error processing uploaded file:', err.stack);
+//     res.status(500).send('Error processing file: ' + err.message);
+//   }
+// });
+ 
+
+ 
+ app.post('/upload-data', upload.single('upload'), async (req, res) => {
   if (!req.file) return res.status(400).send('No file uploaded.');
 
   const filePath = req.file.path;
@@ -692,74 +798,53 @@ app.post('/upload-data', upload.single('upload'), async (req, res) => {
       const workbook = xlsx.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json(sheet, { defval: null });
-      console.log('Parsed Excel data:', data);
+      const data = xlsx.utils.sheet_to_json(sheet, { defval: null, header: 1 });
 
-      // Map Excel columns to expected fields
-      const mappedRows = data
-        .filter((row, index) => {
-          // Skip the header row
-          if (row.__EMPTY === 'ID' && row['EARTHQUAKES RECORDED IN AFRICA; NOVEMBER 2024'] === 'MM'){
-            return false;
+      // Log raw data for debugging
+      console.log('Raw Excel data:', data);
+
+      // Skip header row and map data
+      const mappedRows = data.slice(1).filter((row, index) => {
+        // Ensure row has an ID and it's not null
+        if (!row[0] || isNaN(row[0])) {
+          console.warn(`Skipping row ${index + 2} with null or invalid id:`, row);
+          return false;
+        }
+        return true;
+      }).map((row, index) => {
+        const safeString = (value) => {
+          if (typeof value === 'string') return value.trim();
+          if (value == null) return null;
+          return isFinite(value) ? value.toString() : null;
+        };
+
+        const safeNumber = (value) => {
+          if (value == null) return null;
+          if (typeof value === 'string') {
+            const cleaned = value.replace(/f$/, '');
+            return isFinite(cleaned) ? parseFloat(cleaned) : null;
           }
-          if (row.__EMPTY == null){
-            console.warn(`Skipping row ${index + 2} with null id:`,row);
-            return false;
-          }
-          return true;
-        })
-        .map((row, index) => {
-          // Safely handle fields
-          const safeString = (value) => {
-            if (typeof value === 'string') return value.trim();
-            if (value == null) return null;
-            return isFinite(value) ? value.toString() : null;
-          };
+          return isFinite(value) ? parseFloat(value) : null;
+        };
 
-          const safeNumber = (value) => {
-            if (value == null) return 0;
-            if (typeof value === 'string') {
-              const cleaned = value.replace(/f$/, '');
-              return isFinite(cleaned) ? parseFloat(cleaned) : 0;
-            }
-            return isFinite(value) ? parseFloat(value) : 0;
-          };
-
-          // Debug the raw MM column value
-          const rawMM = row['EARTHQUAKES RECORDED IN AFRICA; NOVEMBER 2024'];
-          const rawH =row.__EMPTY_7;
-          const rawMb = row.__EMPTY_8;
-          if (rawH == null || rawMb == null) {
-            console.warn(`Missing MM value in row ${index + 2}:`,{rawH,rawMb,row} );
-          }
-
-          const rowData = {
-            id: safeNumber(row.__EMPTY),
-            mm: safeString(rawMM) || 'NOV', // Default to 'NOV' if missing
-            year: safeNumber(row__EMPTY_1),
-            day: safeNumber(row.__EMPTY_2),
-            hr: safeNumber(row.__EMPTY_3),
-            minute: safeNumber(row.__EMPTY_4),
-            second: safeNumber(row.__EMPTY_5),
-            latitude: safeNumber(row.__EMPTY_6),
-            longitude: safeNumber(row.__EMPTY_7),
-            h: safeNumber(rawH),
-            mb: safeNumber(rawMb),
-            ml: safeNumber(row.__EMPTY_10),
-            az: safeNumber(row.__EMPTY_11),
-            location: safeString(row.__EMPTY_12),
-            nearest_location: safeString(row.__EMPTY_13)
-          };
-
-          // Log warnings for invalid values
-          Object.entries(rowData).forEach(([key, value]) => {
-            if (value === null && key !== 'ml') {
-              console.warn(`Invalid ${key} in row ${index + 2}:`, row[key]);
-            }
-          });
-
-          return rowData;
-        });
+        return {
+          id: safeNumber(row[0]),
+          day: safeNumber(row[1]),
+          mm: safeString(row[2]) || 'NOV',
+          year: safeNumber(row[3]),
+          minute: safeNumber(row[4]),
+          second: safeNumber(row[5]),
+          hr: safeNumber(row[6]),
+          latitude: safeNumber(row[7]),
+          longitude: safeNumber(row[8]),
+          h: safeNumber(row[9]),
+          mb: safeNumber(row[10]),
+          ml: safeNumber(row[11]),
+          az: safeNumber(row[12]),
+          location: safeString(row[13]),
+          nearest_location: safeString(row[14])
+        };
+      });
 
       console.log('Mapped Excel rows:', mappedRows);
       await insertRows(mappedRows, req, res);
