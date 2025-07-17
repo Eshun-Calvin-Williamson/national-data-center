@@ -118,18 +118,37 @@
   .addTo(map);
 
   // Handle map click with reverse geocoding
-  map.on('click', function(e) {
+
+  
 
 
-    const { lat, lng } = e.latlng;
-    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, location: ${name}`;
-    
-
-    if (marker) {
-      marker.setLatLng(e.latlng);
-    } else {
-      marker = L.marker(e.latlng).addTo(map);
-    }
+    // Click event handler
+    map.on('click', async function(e) {
+      const { lat, lng } = e.latlng;
+      
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`);
+        const data = await response.json();
+        const locationName = data.display_name || 'Unknown location';
+        
+        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${locationName}`;
+        
+        if (marker) {
+          marker.setLatLng(e.latlng);
+        } else {
+          marker = L.marker(e.latlng).addTo(map);
+        }
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: Unable to fetch location`;
+        
+        if (marker) {
+          marker.setLatLng(e.latlng);
+        } else {
+          marker = L.marker(e.latlng).addTo(map);
+        }
+      }
+    });
 
     // Perform reverse geocoding to get location name
     L.Control.Geocoder.nominatim().reverse(
@@ -141,7 +160,7 @@
         marker.bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}<br>Location: ${name}`).openPopup();
       }
     );
-  });
+  
 </script>
 
 </body>

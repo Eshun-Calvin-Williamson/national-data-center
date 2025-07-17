@@ -25,6 +25,7 @@
           <a href="/activities">User Activities</a>
         <% } %>
         <a href="/map" target="_blank">Map</a>
+        <a href="/library" class="active">Library</a>
         <a href="/logout">Logout</a>
       </div>
     </div>
@@ -39,7 +40,7 @@
         <div class="profile">
           <% if (users) { %>
             <img src="<%= users.image || '/images/default-profile.jpg' %>" alt="Profile Picture">
-            <h5>Welcome, <%= users.user_name || 'Guest' %></h5>
+            <h5>Welcome, <%= users.username || 'Guest' %></h5>
           <% } else { %>
             <img src="/images/default-profile.jpg" alt="Profile Picture">
             <h5>Welcome, Guest</h5>
@@ -223,9 +224,28 @@
     const toggleSidebar = document.getElementById('toggleSidebar');
     const sidebar = document.getElementById('sidebar');
     const content = document.getElementById('content');
+
+     function hideSidebar() {
+    sidebar.classList.add('collapsed');
+    content.classList.add('collapsed');
+  }
+
+    let autoHideTimeout;
+  function resetAutoHideTimer() {
+    clearTimeout(autoHideTimeout); // Clear any existing timer
+    autoHideTimeout = setTimeout(hideSidebar, 15000); // Set new timer for 15 seconds
+  }
+
+    resetAutoHideTimer();
+
+    sidebar.addEventListener('mouseenter', resetAutoHideTimer);
+    sidebar.addEventListener('mouseleave', resetAutoHideTimer);
+
+
     toggleSidebar.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
       content.classList.toggle('collapsed');
+      resetAutoHideTimer();
     });
 
     // File Upload
