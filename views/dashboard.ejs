@@ -48,6 +48,10 @@
       color: #ff0000;
       font-style: italic;
     }
+    #resetSelection {
+      margin-left: 10px;
+      margin-bottom: 3px;
+    }
   </style>
 </head>
 <body>
@@ -88,16 +92,18 @@
 
           <div class="right-column">
             <div class="data-display">
-              <!-- <h3>Events Pie Chart</h3> -->
-              <select id="yearFilter" class="form-select year-filter">
-                <option value="">All Years</option>
-                <% 
-                  const years = [...new Set(data.map(item => item.year).filter(year => year != null))].sort((a, b) => a - b);
-                  years.forEach(year => {
-                %>
-                  <option value="<%= year %>"><%= year %></option>
-                <% }) %>
-              </select>
+              <div style="display: flex; align-items: center;">
+                <select id="yearFilter" class="form-select year-filter">
+                  <option value="">All Years</option>
+                  <% 
+                    const years = [...new Set(data.map(item => item.year).filter(year => year != null))].sort((a, b) => a - b);
+                    years.forEach(year => {
+                  %>
+                    <option value="<%= year %>"><%= year %></option>
+                  <% }) %>
+                </select>
+                <button id="resetSelection" class="btn btn-sm btn-secondary">Reset Countries</button>
+              </div>
               <canvas id="pieChart" style="margin-bottom: 32px;"></canvas>
             </div>
 
@@ -132,6 +138,8 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <!-- GeoJSON for African countries (replace with your source) -->
+  <script src="https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"></script>
 
   <script>
     // Initialize map
@@ -176,26 +184,26 @@
     });
 
     // Sidebar toggle
-     const toggleSidebar = document.getElementById('toggleSidebar');
+    const toggleSidebar = document.getElementById('toggleSidebar');
     const sidebar = document.getElementById('sidebar');
     const content = document.getElementById('content');
 
     function hideSidebar() {
-    sidebar.classList.add('collapsed');
-    content.classList.add('collapsed');
-  }
+      sidebar.classList.add('collapsed');
+      content.classList.add('collapsed');
+    }
 
     let autoHideTimeout;
-  function resetAutoHideTimer() {
-    clearTimeout(autoHideTimeout); // Clear any existing timer
-    autoHideTimeout = setTimeout(hideSidebar, 15000); // Set new timer for 15 seconds
-  }
+    function resetAutoHideTimer() {
+      clearTimeout(autoHideTimeout);
+      autoHideTimeout = setTimeout(hideSidebar, 15000);
+    }
 
     resetAutoHideTimer();
 
     sidebar.addEventListener('mouseenter', resetAutoHideTimer);
     sidebar.addEventListener('mouseleave', resetAutoHideTimer);
-
+    
 
     document.getElementById('toggleSidebar').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('collapsed');
@@ -206,26 +214,49 @@
     // Chart and map initialization
     let pieChartInstance = null;
     let barChartInstance = null;
-    let eventMarkers = L.layerGroup().addTo(map); // Layer group for event markers
+    let eventMarkers = L.layerGroup().addTo(map);
+    let countryLayer = L.layerGroup().addTo(map); // Layer for country boundaries
     const data = <%- JSON.stringify(data) %>;
     const africanCountries = [
       'ALGERIA','ANGOLA','BENIN','BOTSWANA','BURKINA FASO','BURUNDI','CAPE VERDE','CAMEROON','CENTRAL AFRICAN REPUBLIC',
       'CHAD','COMOROS','CONGO','DR CONGO','DJIBOUTI','EGYPT','EQUATORIAL GUINEA','ERITREA','ESWATINI','ETHIOPIA',
       'GABON','GAMBIA','GHANA','GUINEA','GUINEA-BISSAU','IVORY COAST','KENYA','LESOTHO','LIBERIA','LIBYA',
       'MADAGASCAR','MALAWI','MALI','MAURITANIA','MAURITIUS','MOROCCO','MOZAMBIQUE','NAMIBIA','NIGER','NIGERIA',
-      'RWANDA','SAO TOME and Principe','SENEGAL','SEYCHELLES','SIERRA LEONE','SOMALIA','SOUTH AFRICA','SOUTH SUDAN',
+      'RWANDA','SAO TOME AND PRINCIPE','SENEGAL','SEYCHELLES','SIERRA LEONE','SOMALIA','SOUTH AFRICA','SOUTH SUDAN',
       'SUDAN','TANZANIA','TOGO','TUNISIA','UGANDA','ZAMBIA','ZIMBABWE'
     ];
+    let selectedCountries = []; // Track selected countries
 
-    function updateChartsAndMap(selectedYear) {
-      // Clear existing markers and charts
+    // Load GeoJSON for African countries
+    fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+      .then(response => response.json())
+      .then(geojson => {
+        // Filter for African countries
+        const africanGeojson = {
+          ...geojson,
+          features: geojson.features.filter(feature => 
+            africanCountries.includes(feature.properties.ADMIN.toUpperCase())
+          )
+        };
+        window.africanGeojson = africanGeojson; // Store for use in update function
+      })
+      .catch(error => console.error('Error loading GeoJSON:', error));
+
+    function updateChartsAndMap(selectedYear, countries = selectedCountries) {
+      // Clear existing markers and country boundaries
       eventMarkers.clearLayers();
+      countryLayer.clearLayers();
       if (pieChartInstance) pieChartInstance.destroy();
       if (barChartInstance) barChartInstance.destroy();
 
       // Filter data based on selected year
       const filteredData = selectedYear ? data.filter(item => item.year == selectedYear) : data;
       const africanData = filteredData.filter(item => africanCountries.includes(item.location?.toUpperCase()));
+
+      // Filter by selected countries if any are selected
+      const mapData = countries.length > 0 
+        ? africanData.filter(item => countries.includes(item.location?.toUpperCase()))
+        : africanData;
 
       // Update Pie Chart
       const locationCounts = africanData.reduce((acc, item) => {
@@ -252,7 +283,7 @@
             labels,
             datasets: [{
               data: values,
-              backgroundColor: ['#ff6384','#36a2eb','#ffce56','#4bc0c0','#9966ff','#ff9f40','#e9a9a6','#8bc34a'],
+              backgroundColor: ['#ff6384','#FAEBD7','#00FFFF','#7FFF00','#FF7F50','#B8860B','#8B008B','#696969','#FFD700','#4B0082','#20B2AA','#800000','#FF4500','#FF0000','#2E8B57','#000080'],
               borderWidth: 1
             }]
           },
@@ -260,113 +291,146 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: 'left' },
+              legend: { 
+                position: 'left',
+                onClick: (e, legendItem, legend) => {
+                  const country = legendItem.text.toUpperCase();
+                  const index = legendItem.index;
+                  // Toggle country selection
+                  if (selectedCountries.includes(country)) {
+                    selectedCountries = selectedCountries.filter(c => c !== country);
+                    legendItem.hidden = false; // Show the legend item
+                  } else {
+                    selectedCountries.push(country);
+                    legendItem.hidden = true; // Hide the legend item
+                  }
+                  // Update chart to reflect hidden state
+                  legend.chart.data.datasets[0].hidden = legend.chart.data.labels.map((_, i) => 
+                    selectedCountries.includes(legend.chart.data.labels[i].toUpperCase())
+                  );
+                  legend.chart.update();
+                  // Update map with selected countries
+                  updateChartsAndMap(selectedYear, selectedCountries);
+                }
+              },
               title: { display: true, text: `Events by African Country${selectedYear ? ' (' + selectedYear + ')' : ''}` }
             }
           }
         });
       }
 
-      // Update Map Markers
-      africanData.forEach(event => {
+      // Update Map Markers with different styles for selected countries
+      mapData.forEach(event => {
         if (event.latitude && event.longitude) {
           const lat = parseFloat(event.latitude);
           const lng = parseFloat(event.longitude);
           if (!isNaN(lat) && !isNaN(lng)) {
-            const eventMarker = L.marker([lat, lng]).addTo(eventMarkers);
-            eventMarker.bindPopup(`<strong>${event.location}</strong><br>Latitude: ${event.latitude || 'N/A'}<br>Longitude: ${event.longitude}<br>Year: ${event.year || 'N/A'}`);
+            // Use different marker styles for selected countries
+            const isSelected = selectedCountries.includes(event.location?.toUpperCase());
+            const markerOptions = {
+              radius: isSelected ? 8 : 6, // Larger for selected
+              fillColor: isSelected ? '#FF0000' : '#3388ff', // Red for selected, blue for others
+              color: '#000',
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            };
+            const eventMarker = L.circleMarker([lat, lng], markerOptions).addTo(eventMarkers);
+            eventMarker.bindPopup(`<strong>${event.location}</strong><br>Latitude: ${event.latitude || 'N/A'}<br>Longitude: ${event.longitude}<br>Magnitude: ${event.mb || 'N/A'}<br>Ml: ${event.ml || 'N/A'}<br>Year: ${event.year || 'N/A'}`);
           }
         }
       });
 
-  // Update Bar Chart
-  const magnitudeRanges = [
-  { label: 'Micro: 1.0–1.9',
-   min: 1.0, max: 1.9 },
-  { label: 'Minor: 2.0–2.9',
-   min: 2.0, max: 2.9 },
-  { label: 'Slight: 3.0–3.9',
-   min: 3.0, max: 3.9 },
-  { label: 'Light: 4.0–4.9',
-   min: 4.0, max: 4.9 },
-  { label: 'Mistrals: 5.0–5.9',
-   min: 5.0, max: 5.9 },
-  { label: 'Strong: 6.0–6.9',
-   min: 6.0, max: 6.9 }
-];
-
-// Count events in each magnitude range
-const counts = magnitudeRanges.map(range => {
-  return filteredData.reduce((count, item) => {
-    const mb = parseFloat(item.mb) || 0;
-    return mb >= range.min && mb <= range.max ? count + 1 : count;
-  }, 0);
-});
-
-// Extract labels for the x-axis with range numbers above words
-
-const barLabels = magnitudeRanges.map(range => {
-  const [word, rangeStr] = range.label.split(': ');
-  return [rangeStr, word]; // Creates a multi-line label: range on top, word below
-});
-
-// // Extract labels for the x-axis
-// const barLabels = magnitudeRanges.map(range => range.label);
-
-// Check if there’s any data to display
-const barChartCanvas = document.getElementById('barChart');
-const barChartContainer = document.querySelector('.bar-chart');
-const noBarDataMessage = barChartContainer.querySelector('.no-data-message');
-if (noBarDataMessage) noBarDataMessage.remove();
-
-if (counts.length === 0 || counts.every(val => val === 0)) {
-  barChartCanvas.style.display = 'none';
-  barChartContainer.innerHTML += '<p class="no-data-message">No magnitude data available for the bar chart.</p>';
-} else {
-  barChartCanvas.style.display = 'block';
-  const barCtx = barChartCanvas.getContext('2d');
-  if (barChartInstance) barChartInstance.destroy(); // Destroy existing chart instance if it exists
-  barChartInstance = new Chart(barCtx, {
-    type: 'bar',
-    data: {
-      labels: barLabels,
-      datasets: [{
-        label: 'Number of Events',
-        data: counts,
-        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: 'Number of Events' },
-          ticks: {
-            maxTicksLimit: 6,
-            stepSize: Math.ceil(Math.max(...counts) / 5)
+      // Highlight selected countries' boundaries
+      if (window.africanGeojson && countries.length > 0) {
+        L.geoJSON(window.africanGeojson, {
+          filter: feature => countries.includes(feature.properties.ADMIN.toUpperCase()),
+          style: {
+            color: '#FF0000', // Red border for selected countries
+            weight: 2,
+            fillOpacity: 0.1,
+            fillColor: '#FF0000'
           }
-        },
-        x: {
-          title: { display: true, text: 'Magnitude Range (mb)' },
-          ticks: {
-            padding: 5
+        }).addTo(countryLayer);
+      }
+
+      // Update Bar Chart
+      const magnitudeRanges = [
+        { label: 'Micro: 1.0–1.9', min: 1.0, max: 1.9 },
+        { label: 'Minor: 2.0–2.9', min: 2.0, max: 2.9 },
+        { label: 'Slight: 3.0–3.9', min: 3.0, max: 3.9 },
+        { label: 'Light: 4.0–4.9', min: 4.0, max: 4.9 },
+        { label: 'Mistrals: 5.0–5.9', min: 5.0, max: 5.9 },
+        { label: 'Strong: 6.0–6.9', min: 6.0, max: 6.9 }
+      ];
+
+      // Count events in each magnitude range
+      const counts = magnitudeRanges.map(range => {
+        return filteredData.reduce((count, item) => {
+          const mb = parseFloat(item.mb) || 0;
+          return mb >= range.min && mb <= range.max ? count + 1 : count;
+        }, 0);
+      });
+
+      const barLabels = magnitudeRanges.map(range => {
+        const [word, rangeStr] = range.label.split(': ');
+        return [rangeStr, word];
+      });
+
+      const barChartCanvas = document.getElementById('barChart');
+      const barChartContainer = document.querySelector('.bar-chart');
+      const noBarDataMessage = barChartContainer.querySelector('.no-data-message');
+      if (noBarDataMessage) noBarDataMessage.remove();
+
+      if (counts.length === 0 || counts.every(val => val === 0)) {
+        barChartCanvas.style.display = 'none';
+        barChartContainer.innerHTML += '<p class="no-data-message">No magnitude data available for the bar chart.</p>';
+      } else {
+        barChartCanvas.style.display = 'block';
+        const barCtx = barChartCanvas.getContext('2d');
+        if (barChartInstance) barChartInstance.destroy();
+        barChartInstance = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: barLabels,
+            datasets: [{
+              label: 'Number of Events',
+              data: counts,
+              backgroundColor: 'rgba(54, 162, 235, 0.7)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Number of Events' },
+                ticks: {
+                  maxTicksLimit: 6,
+                  stepSize: Math.ceil(Math.max(...counts) / 5)
+                }
+              },
+              x: {
+                title: { display: true, text: 'Magnitude Range (mb)' },
+                ticks: {
+                  padding: 5
+                }
+              }
+            },
+            plugins: {
+              legend: { display: true, position: 'top' },
+              title: {
+                display: true,
+                text: `Event Counts by Magnitude Range${selectedYear ? ' (' + selectedYear + ')' : ''}`
+              }
+            }
           }
-        }
-      },
-      plugins: {
-        legend: { display: true, position: 'top' },
-        title: {
-          display: true,
-          text: `Event Counts by Magnitude Range${selectedYear ? ' (' + selectedYear + ')' : ''}`
-        }
+        });
       }
     }
-  });
-}}
 
     // Initial render
     updateChartsAndMap('');
@@ -374,6 +438,14 @@ if (counts.length === 0 || counts.every(val => val === 0)) {
     // Year filter change event
     document.getElementById('yearFilter').addEventListener('change', function() {
       const selectedYear = this.value;
+      selectedCountries = []; // Reset selected countries when year changes
+      updateChartsAndMap(selectedYear);
+    });
+
+    // Reset selection button event
+    document.getElementById('resetSelection').addEventListener('click', function() {
+      selectedCountries = []; // Clear selected countries
+      const selectedYear = document.getElementById('yearFilter').value;
       updateChartsAndMap(selectedYear);
     });
   </script>
