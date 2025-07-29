@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Full-Screen Map with Search and Layers</title>
+  <title>Interactive Map with Year Filter</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -31,12 +31,31 @@
       font-size: 17px;
       z-index: 1000;
       max-width: 300px;
+      color: white;
+    }
+    #yearFilter {
+      position: absolute;
+      top: 10px;
+      left: 60px;
+      z-index: 1000;
+      padding: 5px;
+      font-size: 14px;
+      max-width: 150px;
     }
   </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="coords">Click on the map to get coordinates and location</div>
+<select id="yearFilter">
+  <option value="">All Years</option>
+  <% 
+    const years = [...new Set(data.map(item => item.year).filter(year => year != null))].sort((a, b) => a - b);
+    years.forEach(year => {
+  %>
+    <option value="<%= year %>" <%= year === 2025 ? 'selected' : '' %>><%= year %></option>
+  <% }) %>
+</select>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -44,29 +63,32 @@
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
 <script>
+  // Event data from server
+  const events = <%- JSON.stringify(data) %>;
+
+  // Initialize map
   const map = L.map('map').setView([0, 0], 2);
 
   // Define tile layers
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  });
-
-  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-  });
-
-  const terrain = L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg', {
-    attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>.'
-  });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
 
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+  );
+
+
+
+
+  const terrain = L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg'
+   );
+ 
   // Add OpenStreetMap as default layer
-  osm.addTo(map);
+  satellite.addTo(map);
 
   // Layer control
-  const baseMaps = {
-    "OpenStreetMap": osm,
+  const baseMaps = { 
     "Satellite": satellite,
+    "OpenStreetMap": osm,
     "Terrain": terrain
   };
   L.control.layers(baseMaps).addTo(map);
@@ -77,13 +99,13 @@
   const lng = parseFloat(urlParams.get('lng'));
 
   let marker;
+  let eventMarkers = L.layerGroup().addTo(map);
 
   if (!isNaN(lat) && !isNaN(lng)) {
     const latLng = [lat, lng];
     map.setView(latLng, 10);
     marker = L.marker(latLng).addTo(map);
-    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`;
-    // Reverse geocode for initial URL coordinates
+    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`; 
     L.Control.Geocoder.nominatim().reverse(
       latLng,
       map.options.crs.scale(map.getZoom()),
@@ -103,65 +125,90 @@
     const bbox = e.geocode.bbox;
     const center = e.geocode.center;
     const name = e.geocode.name || 'Unknown location';
-
-    map.fitBounds(bbox);
-
+    map.fitBounds(bbox); 
     if (marker) {
       marker.setLatLng(center);
     } else {
       marker = L.marker(center).addTo(map);
-    }
-
+    } 
     document.getElementById('coords').innerText = `Latitude: ${center.lat.toFixed(5)}, Longitude: ${center.lng.toFixed(5)}, Location: ${name}`;
     marker.bindPopup(`Latitude: ${center.lat.toFixed(5)}<br>Longitude: ${center.lng.toFixed(5)}<br>Location: ${name}`).openPopup();
   })
-  .addTo(map);
+  .addTo(map); 
 
-  // Handle map click with reverse geocoding
+  // Click event handler
+  map.on('click', function(e) {
+    const { lat, lng } = e.latlng;
+    document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: Fetching...`;
+    if (marker) {
+      marker.setLatLng(e.latlng);
+    } else {
+      marker = L.marker(e.latlng).addTo(map);
+    }
+    L.Control.Geocoder.nominatim().reverse(e.latlng, map.options.crs.scale(map.getZoom()), function(results) {
+      const name = results[0]?.name || 'Unknown location';
+      document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${name}`;
+      marker.bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}<br>Location: ${name}`).openPopup();
+    });
+  });
 
-  
+  // Function to update map with events based on selected year
+  function updateMap(selectedYear) {
+    eventMarkers.clearLayers();
+    const filteredEvents = selectedYear ? events.filter(event => event.year == selectedYear) : events;
 
-
-    // Click event handler
-    map.on('click', async function(e) {
-      const { lat, lng } = e.latlng;
-      
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`);
-        const data = await response.json();
-        const locationName = data.display_name || 'Unknown location';
-        
-        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${locationName}`;
-        
-        if (marker) {
-          marker.setLatLng(e.latlng);
+    filteredEvents.forEach(event => {
+      if (event.latitude && event.longitude) {
+        const lat = parseFloat(event.latitude);
+        const lng = parseFloat(event.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const eventMarker = L.circleMarker([lat, lng], {
+            radius: 6,
+            fillColor: '#3388ff',
+            color: '#000',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+          }).addTo(eventMarkers);
+          eventMarker.bindPopup(
+            `<strong>${event.location || 'Unknown'}</strong><br>` +
+            `Latitude: ${event.latitude || 'N/A'}<br>` +
+            `Longitude: ${event.longitude || 'N/A'}<br>` +
+            `Magnitude: ${event.mb || 'N/A'}<br>` +
+            `Ml: ${event.ml || 'N/A'}<br>` +
+            `mm: ${event.mm || 'N/A'}<br>` +
+            `day ${event.day || 'N/A'},<br>`+
+            `Year: ${event.year || 'N/A'}`
+          );
         } else {
-          marker = L.marker(e.latlng).addTo(map);
+          console.warn(`Invalid coordinates for event in ${event.location || 'unknown location'}:`, event);
         }
-      } catch (error) {
-        console.error('Error fetching location name:', error);
-        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: Unable to fetch location`;
-        
-        if (marker) {
-          marker.setLatLng(e.latlng);
-        } else {
-          marker = L.marker(e.latlng).addTo(map);
-        }
+      } else {
+        console.warn(`Missing coordinates for event in ${event.location || 'unknown location'}:`, event);
       }
     });
 
-    // Perform reverse geocoding to get location name
-    L.Control.Geocoder.nominatim().reverse(
-      e.latlng,
-      map.options.crs.scale(map.getZoom()),
-      function(results) {
-        const name = results[0]?.name || 'Unknown location';
-        document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: ${name}`;
-        marker.bindPopup(`Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}<br>Location: ${name}`).openPopup();
+    // Adjust map view to fit events if any exist
+    if (filteredEvents.length > 0) {
+      const validEvents = filteredEvents.filter(event => event.latitude && event.longitude && !isNaN(parseFloat(event.latitude)) && !isNaN(parseFloat(event.longitude)));
+      if (validEvents.length > 0) {
+        const bounds = L.latLngBounds(validEvents.map(event => [parseFloat(event.latitude), parseFloat(event.longitude)]));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+      } else {
+        map.setView([0, 0], 2); // Reset to default view if no valid events
       }
-    );
-  
-</script>
+    } else {
+      map.setView([0, 0], 2); // Reset to default view if no events
+    }
+  }
 
+  // Initial map update with 2025 as default
+  updateMap('2025');
+
+  // Year filter change event
+  document.getElementById('yearFilter').addEventListener('change', function() {
+    updateMap(this.value);
+  });
+</script> 
 </body>
-</html>
+</html> 

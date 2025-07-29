@@ -143,11 +143,13 @@
 
   <script>
     // Initialize map
+     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+
     const map = L.map('map').setView([8.7832, 34.5085], 4); // Default center
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+   
     const terrain = L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg');
-    const baseMaps = { "OpenStreetMap": osm, "Satellite": satellite, "Terrain": terrain };
+    const baseMaps = { "Satellite": satellite, "OpenStreetMap": osm,  "Terrain": terrain };
     L.control.layers(baseMaps).addTo(map);
 
     // Map click handler for coordinates
@@ -220,7 +222,7 @@
     const africanCountries = [
       'ALGERIA','ANGOLA','BENIN','BOTSWANA','BURKINA FASO','BURUNDI','CAPE VERDE','CAMEROON','CENTRAL AFRICAN REPUBLIC',
       'CHAD','COMOROS','CONGO','DR CONGO','DJIBOUTI','EGYPT','EQUATORIAL GUINEA','ERITREA','ESWATINI','ETHIOPIA',
-      'GABON','GAMBIA','GHANA','GUINEA','GUINEA-BISSAU','IVORY COAST','KENYA','LESOTHO','LIBERIA','LIBYA',
+      'GABON','GAMBIA','NORTHWEST AFRICA','GUINEA','GUINEA-BISSAU','IVORY COAST','KENYA','LESOTHO','LIBERIA','LIBYA',
       'MADAGASCAR','MALAWI','MALI','MAURITANIA','MAURITIUS','MOROCCO','MOZAMBIQUE','NAMIBIA','NIGER','NIGERIA',
       'RWANDA','SAO TOME AND PRINCIPE','SENEGAL','SEYCHELLES','SIERRA LEONE','SOMALIA','SOUTH AFRICA','SOUTH SUDAN',
       'SUDAN','TANZANIA','TOGO','TUNISIA','UGANDA','ZAMBIA','ZIMBABWE'
@@ -283,7 +285,7 @@
             labels,
             datasets: [{
               data: values,
-              backgroundColor: ['#ff6384','#FAEBD7','#00FFFF','#7FFF00','#FF7F50','#B8860B','#8B008B','#696969','#FFD700','#4B0082','#20B2AA','#800000','#FF4500','#FF0000','#2E8B57','#000080'],
+              backgroundColor: ['#ff6384','#FAEBD7','#00FFFF','#7FFF00','#FF7F50','#B8860B','#8B008B','#696969','#FFD700','#4B0082','#20B2AA','#800000','#FF4500','#FF0000','#2E8B57','#000080','#000000','#7FFF20','#A9A9A9','#556B2F','#483D8B','#FF1493','#FFFAF0','#F0FFF0'],
               borderWidth: 1
             }]
           },
@@ -313,7 +315,7 @@
                   updateChartsAndMap(selectedYear, selectedCountries);
                 }
               },
-              title: { display: true, text: `Events by African Country${selectedYear ? ' (' + selectedYear + ')' : ''}` }
+              title: { display: true, text: `${selectedYear ? ' (' + selectedYear + ')' : ''}` }
             }
           }
         });
@@ -336,7 +338,7 @@
               fillOpacity: 0.8
             };
             const eventMarker = L.circleMarker([lat, lng], markerOptions).addTo(eventMarkers);
-            eventMarker.bindPopup(`<strong>${event.location}</strong><br>Latitude: ${event.latitude || 'N/A'}<br>Longitude: ${event.longitude}<br>Magnitude: ${event.mb || 'N/A'}<br>Ml: ${event.ml || 'N/A'}<br>Year: ${event.year || 'N/A'}`);
+            eventMarker.bindPopup(`<strong>${event.location}</strong><br>Latitude: ${event.latitude || 'N/A'}<br>Longitude: ${event.longitude}<br>Magnitude: ${event.mb || 'N/A'}<br>Ml: ${event.ml || 'N/A'}<br>Month: ${event.mm || 'N/A'}<br> Day ${event.day}<br>Year: ${event.year || 'N/A'}`);
           }
         }
       });

@@ -627,7 +627,7 @@ body, h1, h2, h3, p, ul, li {
 
 
   .atv-tb {
-    max-height: 90vh; 
+    max-height: 65vh; 
     overflow-y: auto;  
     margin: 20px;
     border: 1px solid #ccc;

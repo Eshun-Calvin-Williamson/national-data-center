@@ -23,6 +23,7 @@ dotenv.config()
 import { name } from 'ejs';
 import bcrypt from 'bcrypt'
 import rateLimit from 'express-rate-limit';
+import {promises as fs} from 'fs'
 
 
 
@@ -105,37 +106,63 @@ async function logActivity(user, action, details = '') {
 }
 
 
-const passcode =async (req,res,next)=>{
-  const {id,password,email} =req.body;
+// const passcode =async (req,res,next)=>{
+//   const {id,password,email} =req.body;
 
 
-try {
-    const results =await db.query(`SELECT id, user_name, email, image, password,role FROM users WHERE email = $1`,[email]);
+// try {
+//     const results =await db.query(`SELECT id, user_name, email, image, password,role FROM users WHERE email = $1`,[email]);
     
-    const users =results.rows[0];
+//     const users =results.rows[0];
     
-    if(users){
-      if(password === users.password){
-        req.session.user =users;
-        req.users =users;
-        validUSer =true;
-        await logActivity(users, 'Login', 'User logged in successfully');
-      }else{
-        validUSer =false
-      }
-    }
-    else{
-      validUSer =false;
+//     if(users){
+//       if(password === users.password){
+//         req.session.user =users;
+//         req.users =users;
+//         validUSer =true;
+//         await logActivity(users, 'Login', 'User logged in successfully');
+//       }else{
+//         validUSer =false
+//       }
+//     }
+//     else{
+//       validUSer =false;
+//       await logActivity(null, 'Failed Login', `Attempted login for ${email}`);
+//     }
+//     if(!validUSer){
+//       return res.redirect('/?error=Login failed, please check your credentials');
+//     }
+//     next();
+// } catch (err) {
+//   console.error(`Error checking credentials`)
+//   res.status(500).send('Error Checking credentials')
+// }
+// };
+
+
+const passcode = async (req, res, next) => {
+  const { id, password, email } = req.body;
+  try {
+    const results = await db.query(`SELECT id, user_name, email, image, password, role FROM users WHERE email = $1`, [email]);
+    const user = results.rows[0];
+    if (user && await bcrypt.compare(password, user.password)) {
+      req.session.user = {
+        id: user.id,
+        username: user.user_name, // Use username to match templates
+        email: user.email,
+        image: user.image,
+        role: user.role
+      };
+      await logActivity(req.session.user, 'Login', 'User logged in successfully');
+      next();
+    } else {
       await logActivity(null, 'Failed Login', `Attempted login for ${email}`);
+      res.redirect('/?error=Invalid credentials');
     }
-    if(!validUSer){
-      return res.redirect('/?error=Login failed, please check your credentials');
-    }
-    next();
-} catch (err) {
-  console.error(`Error checking credentials`)
-  res.status(500).send('Error Checking credentials')
-}
+  } catch (err) {
+    console.error('Error checking credentials:', err);
+    res.status(500).send('Error checking credentials');
+  }
 };
 
 
@@ -183,7 +210,8 @@ app.get('/user',isAuthenticated ,(req,res)=>{
 if(req.session.user?.role !== 'admin'){
   return res.status(403).send('Access denied')
 }
-  res.render('user.ejs',{ user: req.session.user})
+  res.render('user.ejs',
+    { users: req.session.user})
 })
 
 
@@ -234,8 +262,9 @@ app.delete('/delete-users/:id', isAuthenticated, requireAdmin, async (req, res) 
 
 
 app.get('/add', isAuthenticated, (req,res)=>{
-  res.render('add.ejs',{users: req.session.user})
-})
+  res.render('add.ejs',
+    {users: req.session.user})
+});
 
  
 
@@ -247,7 +276,7 @@ app.get('/activities', isAuthenticated, requireAdmin, async (req, res) => {
     res.render('activities.ejs',
        { 
           logs: logs.rows,
-          users: req.session.users
+          users: req.session.user
        });
 
 
@@ -260,9 +289,21 @@ app.get('/activities', isAuthenticated, requireAdmin, async (req, res) => {
  
 
 // map route 
-app.get('/map',(req,res)=>{
-  res.render('map')
+app.get('/map',isAuthenticated ,async (req,res)=>{
+  try{
+      const results = await db.query(`SELECT * FROM data`)
+    await logActivity (req.session.user,'view Map','User accesed interactive map page')
+    res.render(
+      'map',{
+        users: req.session.user,
+        data: results.rows
+      });
+  } catch (err){
+    console.error('Error Fetching data for map:', err)
+    await logActivity( req.session.user, 'Map View Error','Error Fetching data for map')
+  }
 })
+
 
 
 // password authentication
@@ -310,20 +351,14 @@ app.post('/submit',passcode, isAuthenticated,
 
     res.render('dashboard.ejs',
       { metrics,
-        users: req.users,
-        data: dataResults.rows
+        users: req.session.user,
+        data: sanitizedData
     })
 
   } catch (err) {
     console.error('Error fetching data for dashboard:', err);
     res.status(500).send('Error loading dashboard');
-  }
-
-  if(validUSer){
-  }else{
-    res.send('wrong message :: Check logins')
-  }
-})
+  }});
 
 
 app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
@@ -565,8 +600,10 @@ app.get('/dashboard',isAuthenticated, async (req, res) => {
     const usersResults = await db.query('SELECT id, email, image,user_name FROM users');
 
 
-    res.render('dashboard.ejs', { metrics, users:usersResults.rows,
-    data: sanitizedData 
+    res.render('dashboard.ejs',
+       { metrics,
+         users:req.session.user,
+         data: sanitizedData 
      });
   } catch (err) {
     console.error('Error fetching data for dashboard:', err);
@@ -772,6 +809,7 @@ app.get('/download-excel', async (req, res) => {
 //   }
 // });
  
+
 
  
  app.post('/upload-data', upload.single('upload'), async (req, res) => {
@@ -1182,6 +1220,107 @@ app.get('/download-template-excel', async (req, res) => {
     res.status(500).send('Error downloading template');
   }
 });
+
+
+app.get('/library', isAuthenticated, async (req, res) => {
+  try {
+    const results = await db.query(`
+      SELECT id, name, upload_date, type, size
+      FROM files
+      ORDER BY upload_date DESC
+    `);
+    await logActivity(req.session.user, 'View Library', 'User accessed library page');
+    res.render('library.ejs', {
+      users: req.session.user,
+      files: results.rows,
+      success: req.query.success,
+      error: req.query.error
+    });
+  } catch (err) {
+    console.error('Error fetching files:', err);
+    await logActivity(req.session.user, 'View Library Error', 'Error fetching files');
+    res.redirect('/library?error=Error loading library');
+  }
+});
+
+app.post('/upload-file', isAuthenticated, upload.single('upload'), async (req, res) => {
+  if (!req.file) {
+    await logActivity(req.session.user, 'Upload File Failed', 'No file uploaded');
+    return res.redirect('/library?error=No file uploaded');
+  }
+  try {
+    const { originalname, mimetype, size, filename } = req.file;
+    const fileData = {
+      name: originalname,
+      type: mimetype,
+      size: (size / 1024).toFixed(2) + ' KB',
+      path: `/Uploads/${filename}`,
+      upload_date: new Date()
+    };
+    await db.query(`
+      INSERT INTO files (name, type, size, path, upload_date)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [
+      fileData.name,
+      fileData.type,
+      fileData.size,
+      fileData.path,
+      fileData.upload_date
+    ]);
+    await logActivity(req.session.user, 'Upload File', `Uploaded file: ${originalname}`);
+    res.redirect('/library?success=File uploaded successfully');
+  } catch (err) {
+    console.error('Error saving file metadata:', err);
+    await logActivity(req.session.user, 'Upload File Error', `Error uploading file: ${req.file?.originalname || 'unknown'}`);
+    res.redirect('/library?error=Error uploading file');
+  }
+});
+
+app.get('/download-file/:id', isAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query('SELECT name, path FROM files WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      await logActivity(req.session.user, 'Download File Failed', `File ID ${id} not found`);
+      return res.redirect('/library?error=File not found');
+    }
+    const file = result.rows[0];
+    const filePath = path.join(__dirname, file.path);
+    await logActivity(req.session.user, 'Download File', `Downloaded file: ${file.name}`);
+    res.download(filePath, file.name, (err) => {
+      if (err) {
+        console.error('Error downloading file:', err);
+        res.redirect('/library?error=Error downloading file');
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching file for download:', err);
+    await logActivity(req.session.user, 'Download File Error', `Error fetching file ID ${id}`);
+    res.redirect('/library?error=Error downloading file');
+  }
+});
+
+app.delete('/delete-file/:id', isAuthenticated, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query('SELECT name, path FROM files WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      await logActivity(req.session.user, 'Delete File Failed', `File ID ${id} not found`);
+      return res.redirect('/library?error=File not found');
+    }
+    const file = result.rows[0];
+    const filePath = path.join(__dirname, file.path);
+    await fs.unlink(filePath);
+    await db.query('DELETE FROM files WHERE id = $1', [id]);
+    await logActivity(req.session.user, 'Delete File', `Deleted file: ${file.name}`); 
+    res.redirect('/library?success=File deleted successfully');
+  } catch (err) {
+    console.error('Error deleting file:', err);
+    await logActivity(req.session.user, 'Delete File Error', `Error deleting file ID ${id}`);
+    res.redirect('/library?error=Error deleting file');
+  }
+});
+
 
 
 
