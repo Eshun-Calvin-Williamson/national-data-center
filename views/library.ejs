@@ -18,7 +18,7 @@
         <a href="/add">Add Data</a>
         <a href="/manage-data">Manage Data</a>
         <% if (users && users.role === 'admin') { %>
-          <a href="/activities">User Activities</a>
+          <a href="/activities">User Logs</a>
         <% } %>
         <a href="/map" target="_blank">Map</a>
         <a href="/library" class="active">Library</a>
@@ -41,6 +41,11 @@
         </div>
       </div>
 
+      <div style="width: 20%; margin-top: 1%;" class="search-bar mb-3">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search files by name or category...">
+      </div>
+
+
       <!-- File Upload Form -->
       <% if( users && users.role === 'admin'){ %>
       <form action="/upload-file" method="POST" enctype="multipart/form-data" class="upload-form" id="uploadForm">
@@ -60,6 +65,14 @@
               accept=".csv, .xlsx, .xls, .pdf, .doc, .docx"
             >
           </div>
+           <select name="category" id="categorySelect" class="form-select" style="width: auto;">
+            <option value="Uncategorized">Select Category</option>
+            <option value="Reports">Reports</option>
+            <option value="Manuals">Manuals</option>
+            <option value="Presentations">Presentations</option>
+            <option value="Data Sheets">Data Sheets</option>
+            <option value="Others">Others</option>
+          </select>
         </div>
       </form>
     <%}%>
@@ -70,20 +83,18 @@
           <thead>
             <tr>
               <th>File Name</th>
+              <th>Category</th>
               <th>Upload Date</th>
-              <th>File Type</th>
-              <th>Size</th>
-              <th>Actions</th>
+              <th>Actions</th> 
             </tr>
           </thead>
           <tbody>
             <% files && files.forEach(file => { %>
               <tr>
                 <td><%= file.name %></td>
+                <td><%= file.category %></td>
                 <td><%= file.upload_date %></td>
-                <td><%= file.type %></td>
-                <td><%= file.size %></td>
-                <td>
+                <td> 
                   <a href="/download-file/<%= file.id %>" class="btn btn-sm btn-primary">
                     <i class="fas fa-download"></i> Download
                   </a>
@@ -138,6 +149,27 @@
     fileInput.addEventListener('change', function () {
       if (fileInput.files.length > 0) {
         uploadForm.submit();
+      }
+    });
+
+
+     // Search Functionality
+    const searchInput = document.getElementById('searchInput');
+    const fileTable = document.getElementById('fileTable');
+    const fileTableBody = document.getElementById('fileTableBody');
+
+    searchInput.addEventListener('input', function () {
+      const searchTerm = searchInput.value.toLowerCase();
+      const rows = fileTableBody.getElementsByTagName('tr');
+
+      for (let row of rows) {
+        const fileName = row.cells[0].textContent.toLowerCase();
+        const category = row.cells[1].textContent.toLowerCase();
+        if (fileName.includes(searchTerm) || category.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
       }
     });
   </script>

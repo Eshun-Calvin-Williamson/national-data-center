@@ -1225,7 +1225,7 @@ app.get('/download-template-excel', async (req, res) => {
 app.get('/library', isAuthenticated, async (req, res) => {
   try {
     const results = await db.query(`
-      SELECT id, name, upload_date, type, size
+      SELECT id, name, upload_date, type, size,category
       FROM files
       ORDER BY upload_date DESC
     `);
@@ -1250,22 +1250,26 @@ app.post('/upload-file', isAuthenticated, upload.single('upload'), async (req, r
   }
   try {
     const { originalname, mimetype, size, filename } = req.file;
+    const { category } = req.body; // Added category from form
     const fileData = {
       name: originalname,
       type: mimetype,
       size: (size / 1024).toFixed(2) + ' KB',
       path: `/Uploads/${filename}`,
-      upload_date: new Date()
+      upload_date: new Date(),
+      category: category || 'Uncategorized' // Default to 'Uncategorized' if none provided
     };
     await db.query(`
-      INSERT INTO files (name, type, size, path, upload_date)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO files (name, type, size, path, upload_date, category)
+      VALUES ($1, $2, $3, $4, $5, $6)
     `, [
       fileData.name,
       fileData.type,
       fileData.size,
       fileData.path,
-      fileData.upload_date
+      fileData.upload_date,
+      fileData.category
+
     ]);
     await logActivity(req.session.user, 'Upload File', `Uploaded file: ${originalname}`);
     res.redirect('/library?success=File uploaded successfully');
