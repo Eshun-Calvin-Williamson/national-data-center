@@ -16,6 +16,7 @@
     <!-- Collapsible Sidebar -->
     <div class="dh-menu" id="sidebar">
       <div class="menu-links">
+          <a href="/home" class="active">Home</a>
         <% if (users && users.role === 'admin') { %>
           <a href="/user">Manage User</a>
         <% } %>
@@ -26,6 +27,7 @@
         <% } %>
         <a href="/map" target="_blank">Map</a>
         <a href="/library" class="active">Library</a>
+        <a href="/recordMap">Record Data</a>
         <a href="/logout">Logout</a>
       </div>
     </div>
@@ -77,10 +79,6 @@
         <form action="/events" method="post" class="event-form">
           <div class="scroll-wrapper">
             <div class="form-grid">
-              <div class="form-group">
-                <label for="id">ID</label>
-                <input type="text" name="id" id="id" placeholder="Event ID" required style="width: 80px;">
-              </div>
               <div class="form-group">
                 <label for="year">Year</label>
                 <input type="text" name="year" id="year" placeholder="0000" required style="width: 60px;">

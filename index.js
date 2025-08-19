@@ -197,6 +197,51 @@ app.get('/logout', async (req,res)=>{
   })
 
 
+
+
+  app.get('/home', isAuthenticated, async (req, res) => {
+  try {
+    const nssResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role = $1', ['nss']);
+    const staffResults = await db.query('SELECT COUNT(*) AS count FROM users WHERE role = $1', ['user']);
+    const dataResults = await db.query('SELECT * FROM data ORDER BY id ASC');
+
+    const totalCount = parseInt(nssResults.rows[0].count) + parseInt(staffResults.rows[0].count);
+    const metrics = {
+      nssPersonnel: nssResults.rows[0].count,
+      staffMembers: staffResults.rows[0].count,
+      totalMembers: totalCount,
+    };
+
+    const sanitizedData = dataResults.rows.map(row => ({
+      id: row.id || null,
+      day: row.day || null,
+      mm: row.mm || null,
+      year: row.year || null,
+      minute: row.minute || null,
+      second: row.second || null,
+      hr: row.hr || null,
+      latitude: row.latitude || null,
+      longitude: row.longitude || null,
+      h: row.h || null,
+      mb: row.mb || null,
+      ml: row.ml || null,
+      az: row.az || null,
+      location: row.location === 'GH' ? 'Ghana' : row.location || null,
+      nearest_location: row.nearest_location || null,
+    }));
+
+    await logActivity(req.session.user, 'Access Home Dashboard', 'User accessed home dashboard');
+
+    res.render('dashboard.ejs', {
+      metrics,
+      users: req.session.user,
+      data: sanitizedData,
+    });
+  } catch (err) {
+    console.error('Error fetching data for home dashboard:', err);
+    res.status(500).send('Error loading home dashboard');
+  }
+});
 // app.get('/', (req, res) => {
 //   const success = req.query.success || null;
 //   const error = req.query.error || null;
@@ -363,15 +408,16 @@ app.post('/submit',passcode, isAuthenticated,
 
 app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
 
-  const {id,password,email,name,role} =req.body;
+  const {password,email,name,role} =req.body;
   const image = req.file ? `/uploads/${req.file.filename}`: null;
   const hashedPassword =await bcrypt.hash(password,10)
 
   try {
-    await db.query(`INSERT INTO users (id,password,email,image,user_name,role)
+    await db.query(`INSERT INTO users (password,email,image,user_name,role)
        VALUES
-       ($1,$2,$3,$4,$5,$6)`
-       ,[id,password,email,image,name,role]);
+       ($1,$2,$3,$4,$5)
+       RETURNING id`
+       ,[password,email,image,name,role]);
 
        await logActivity(req.session.user, 'Create User', `User ${email} added`);
 
@@ -385,8 +431,7 @@ app.post('/add',upload.single('photo'), isAuthenticated, async (req,res)=>{
  
 
 app.post('/events', async (req, res) => {
-  const {
-    id,
+  const { 
     day,
     month,
     year,
@@ -404,7 +449,7 @@ app.post('/events', async (req, res) => {
   } = req.body;
 
   if (
-    !id || !day || !month || !year || !minute || !second || !hour ||
+    !day || !month || !year || !minute || !second || !hour ||
     !latitude || !longitude || !H || !Mb ||
     !Ml || !Az || !location || !nearest_location
   ) {
@@ -412,11 +457,11 @@ app.post('/events', async (req, res) => {
   }
 
   try {
-    await db.query(`
+      const result = await db.query(`
       INSERT INTO data (
-        id, day, mm, year, minute, second, hr, latitude, longitude, h, mb, ml, az, location, nearest_location
+        day, mm, year, minute, second, hr, latitude, longitude, h, mb, ml, az, location, nearest_location
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14,$15
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14
       )
       ON CONFLICT (id) DO UPDATE SET
         day = EXCLUDED.day,
@@ -433,8 +478,7 @@ app.post('/events', async (req, res) => {
         az = EXCLUDED.az,
         location = EXCLUDED.location,
         nearest_location = EXCLUDED.nearest_location
-    `, [
-      id,
+    RETURNING id`, [
       day,
       month,
       year,
@@ -451,7 +495,10 @@ app.post('/events', async (req, res) => {
       nearest_location
     ]);
 
-    await logActivity(req.session.user, 'Add/Update Event', `Event ${id} added or updated`);
+    const newEventId = result.rows[0].id;
+
+
+    await logActivity(req.session.user, 'Add/Update Event', `Event ${newEventId} added or updated`);
 
 
     res.redirect('/add');
@@ -515,7 +562,7 @@ app.get('/search', async (req, res) => {
 
   if (column && validColumns.includes(column)) {
     // Search in a specific column
-    sqlQuery = `SELECT * FROM data WHERE ${column}::TEXT = $1`;
+    sqlQuery = `SELECT * FROM data WHERE ${column}::TEXT ILIKE '%'|| $1 || '%'`;
     queryParams = [query];
   } else {
     // Search across all columns
@@ -531,11 +578,11 @@ app.get('/search', async (req, res) => {
         latitude::TEXT = $1 OR
         longitude::TEXT = $1 OR
         h::TEXT = $1 OR
-        mb::TEXT = $1 OR
+        mb::text ILIKE $1 || '%' OR
         ml::TEXT = $1 OR
         az::TEXT = $1 OR
-        location = $1 OR
-        nearest_location = $1
+        location::text ILIKE $1|| '%' OR
+        nearest_location::text ILIKE || '%' = $1
     `;
     queryParams = [query];
   }
@@ -904,7 +951,7 @@ async function insertRows(rows, req, res) {
 
     for (const row of rows) {
       const {
-        id, day, mm, year, minute, second, hr,
+        day, mm, year, minute, second, hr,
         latitude, longitude, h, mb, ml, az,
         location, nearest_location
       } = row;
@@ -926,8 +973,7 @@ async function insertRows(rows, req, res) {
       }
 
       // Convert data types if needed
-      const cleanedRow = {
-        id: parseInt(id, 10),
+      const cleanedRow = { 
         day: parseInt(day, 10),
         mm,
         year: parseInt(year, 10),
@@ -946,11 +992,11 @@ async function insertRows(rows, req, res) {
 
       await db.query(`
         INSERT INTO data (
-          id, day, mm, year, minute, second, hr,
+          day, mm, year, minute, second, hr,
           latitude, longitude, h, mb, ml, az,
           location, nearest_location
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,$15
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
         )
         ON CONFLICT (id) DO UPDATE SET
           day = EXCLUDED.day,
@@ -967,8 +1013,8 @@ async function insertRows(rows, req, res) {
           az = EXCLUDED.az,
           location = EXCLUDED.location,
           nearest_location = EXCLUDED.nearest_location
-      `, [
-        cleanedRow.id, cleanedRow.day, cleanedRow.mm, cleanedRow.year, cleanedRow.minute,
+      RETURNING id`, [
+        cleanedRow.day, cleanedRow.mm, cleanedRow.year, cleanedRow.minute,
         cleanedRow.second, cleanedRow.hr, cleanedRow.latitude, cleanedRow.longitude,
         cleanedRow.h, cleanedRow.mb, cleanedRow.ml, cleanedRow.az,
         cleanedRow.location, cleanedRow.nearest_location
@@ -1166,8 +1212,7 @@ app.get('/download-template-excel', async (req, res) => {
     const worksheet = workbook.addWorksheet('Data Template');
 
     // Define headers
-    worksheet.columns = [
-      { header: 'id', key: 'id', width: 10 },
+    worksheet.columns = [ 
       { header: 'day', key: 'day', width: 10 },
       { header: 'mm', key: 'mm', width: 10 },
       { header: 'year', key: 'year', width: 10 },
@@ -1185,8 +1230,7 @@ app.get('/download-template-excel', async (req, res) => {
     ];
 
     // Add sample row
-    worksheet.addRow({
-      id: 1,
+    worksheet.addRow({ 
       day: 15,
       mm:'NOV',
       year: 2025,
@@ -1325,7 +1369,11 @@ app.delete('/delete-file/:id', isAuthenticated, requireAdmin, async (req, res) =
   }
 });
 
-
+app.get('/recordMap',async (req,res)=>{
+  res.render('recordMap',{
+    users: req.session.user
+  })
+})
 
 
 app.listen(port,()=>{

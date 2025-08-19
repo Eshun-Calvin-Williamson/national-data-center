@@ -16,6 +16,7 @@
   <div class="main-dashboard">
     <div class="dh-menu" id="sidebar">
       <div class="menu-links">
+          <a href="/home" class="active">Home</a>
          <% if (users && users.role === 'admin') { %>
           <a href="/user">Manage User</a>
         <% } %>
@@ -30,6 +31,7 @@
 
         <a href="/map" target="_blank">Map</a>
         <a href="/library" class="active">Library</a>
+        <a href="/recordMap">Record Data</a>
         <a href="/logout">Logout</a>
       </div>
     </div>
@@ -153,15 +155,15 @@
               <td><%= data.az %></td>
               
               <td>
-                <a style="font-size: 20px;" href="/map?lat=<%= data.latitude %>&lng=<%= data.longitude %>" target="_blank">
-                  <%= data.location %>
-                </a>
+               <a href="/map?lat=<%= data.latitude %>&lng=<%= data.longitude %>&mb=<%= data.mb %>&day=<%= data.day %>&az=<%= data.az %>&Month=<%= data.mm %>&ml=<%= data.ml %>&Year=<%= data.year %>&location=<%= encodeURIComponent(data.location || 'Unknown') %>" target="_blank">
+                <%= data.location %>
+               </a>
               </td>
               
               <td>
-                <a href="/map?lat=<%= data.latitude %>&lng=<%= data.longitude %>" target="_blank">
-                    <%= data.nearest_location || 'Unknown' %>
-                  </a>
+               <a href="/map?lat=<%= data.latitude %>&lng=<%= data.longitude %>&mb=<%= data.mb %>&day=<%= data.day %>&az=<%= data.az %>&Month=<%= data.mm %>&ml=<%= data.ml %>&Year=<%= data.year %>&location=<%= encodeURIComponent(data.nearest_location || 'Unknown') %>" target="_blank">
+                <%= data.nearest_location || 'Unknown' %>
+               </a>
               </td>
                 
               <td>

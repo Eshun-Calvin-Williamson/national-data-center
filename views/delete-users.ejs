@@ -44,6 +44,7 @@
   <div class="main-dashboard">
     <div class="dh-menu">
       <div class="menu-links">
+        <a href="/home" class="active">Home</a>
         <% if (user && user.role === 'admin') { %>
           <a href="/user">Manage User</a>
         <% } %>
@@ -54,6 +55,7 @@
         <% } %>    
         <a href="/map">Map</a>
         <a href="/library" class="active">Library</a>
+        <a href="/recordMap">Record Data</a>
         <a href="/logout">Logout</a>
       </div>
     </div>
