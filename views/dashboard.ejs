@@ -373,6 +373,11 @@
           };
           const eventMarker = L.circleMarker([lat, lng], markerOptions).addTo(eventMarkers);
           eventMarker.bindPopup(`<strong>${event.location}</strong><br>Latitude: ${event.latitude || 'N/A'}<br>Longitude: ${event.longitude}<br>Magnitude: ${event.mb || 'N/A'}<br>Ml: ${event.ml || 'N/A'}<br>Month: ${event.mm || 'N/A'}<br> Day ${event.day}<br>Year: ${event.year || 'N/A'}`);
+
+          // Add click event to zoom in
+          eventMarker.on('click', function () {
+            map.setView([lat, lng], 5); // Zoom to level 5
+          });
         }
       }
     });
