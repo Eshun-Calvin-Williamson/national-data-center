@@ -859,7 +859,90 @@ app.get('/download-excel', async (req, res) => {
 
 
  
- app.post('/upload-data', upload.single('upload'), async (req, res) => {
+//  app.post('/upload-data', upload.single('upload'), async (req, res) => {
+//   if (!req.file) return res.status(400).send('No file uploaded.');
+
+//   const filePath = req.file.path;
+//   const ext = path.extname(filePath).toLowerCase();
+//   const rows = [];
+
+//   try {
+//     if (ext === '.csv') {
+//       const fs = await import('fs');
+//       fs.createReadStream(filePath)
+//         .pipe(csv())
+//         .on('data', (row) => {
+//           console.log('Parsed CSV row:', row);
+//           rows.push(row);
+//         })
+//         .on('end', async () => {
+//           console.log('All CSV rows:', rows);
+//           await insertRows(rows, req, res);
+//         });
+//     } else if (ext === '.xlsx' || ext === '.xls') {
+//       const workbook = xlsx.readFile(filePath);
+//       const sheetName = workbook.SheetNames[0];
+//       const sheet = workbook.Sheets[sheetName];
+//       const data = xlsx.utils.sheet_to_json(sheet, { defval: null, header: 1 });
+
+//       // Log raw data for debugging
+//       console.log('Raw Excel data:', data);
+
+//       // Skip header row and map data
+//       const mappedRows = data.slice(1).filter((row, index) => {
+
+//         // Validate required fields (excluding id)
+
+//       if (!row[0] || !row[2] || !row[3] || !row[4] || !row[5] || !row[6] || !row[7] || !isFinite(row[8]) || !isFinite(row[9]) || !row[10] || !row[11] || !row[12] || !row[13]) {
+//           console.warn(`Skipping row ${index + 2} with missing or invalid fields:`, row);
+//           return false;  
+//         }
+//         return true;
+//       }).map((row, index) => {
+//         const safeString = (value) => {
+//           if (typeof value === 'string') return value.trim();
+//           if (value == null) return null;
+//           return isFinite(value) ? value.toString() : null;
+//         };
+
+//         const safeNumber = (value) => {
+//           if (value == null) return null;
+//           if (typeof value === 'string') {
+//             const cleaned = value.replace(/f$/, '');
+//             return isFinite(cleaned) ? parseFloat(cleaned) : null;
+//           }
+//           return isFinite(value) ? parseFloat(value) : null;
+//         };
+
+//         return {
+//           day: safeNumber(row[0]),
+//           mm: safeString(row[1]) || 'NOV',
+//           year: safeNumber(row[2]),
+//           minute: safeNumber(row[3]),
+//           second: safeNumber(row[4]),
+//           hr: safeNumber(row[5]),
+//           latitude: safeNumber(row[6]),
+//           longitude: safeNumber(row[7]),
+//           h: safeNumber(row[8]),
+//           mb: safeNumber(row[9]),
+//           ml: safeNumber(row[10]),
+//           az: safeNumber(row[11]),
+//           location: safeString(row[12]),
+//           nearest_location: safeString(row[13])
+//         };
+//       });
+
+//       console.log('Mapped Excel rows:', mappedRows);
+//       await insertRows(mappedRows, req, res);
+//     } else {
+//       return res.status(400).send('Unsupported file format. Upload .csv or .xlsx only.');
+//     }
+//   } catch (err) {
+//     console.error('Error processing uploaded file:', err.stack);
+//     res.status(500).send('Error processing file: ' + err.message);
+//   }
+// });
+app.post('/upload-data', upload.single('upload'), async (req, res) => {
   if (!req.file) return res.status(400).send('No file uploaded.');
 
   const filePath = req.file.path;
@@ -888,15 +971,8 @@ app.get('/download-excel', async (req, res) => {
       // Log raw data for debugging
       console.log('Raw Excel data:', data);
 
-      // Skip header row and map data
-      const mappedRows = data.slice(1).filter((row, index) => {
-        // Ensure row has an ID and it's not null
-        if (!row[0] || isNaN(row[0])) {
-          console.warn(`Skipping row ${index + 2} with null or invalid id:`, row);
-          return false;
-        }
-        return true;
-      }).map((row, index) => {
+      // Skip header row and map/clean data first, then filter
+      const mappedRows = data.slice(1).map((row, index) => {
         const safeString = (value) => {
           if (typeof value === 'string') return value.trim();
           if (value == null) return null;
@@ -906,29 +982,50 @@ app.get('/download-excel', async (req, res) => {
         const safeNumber = (value) => {
           if (value == null) return null;
           if (typeof value === 'string') {
-            const cleaned = value.replace(/f$/, '');
+            const cleaned = value.replace(/f$/i, ''); // Case-insensitive regex to handle 'F' or 'f'
             return isFinite(cleaned) ? parseFloat(cleaned) : null;
           }
           return isFinite(value) ? parseFloat(value) : null;
         };
 
         return {
-          id: safeNumber(row[0]),
-          day: safeNumber(row[1]),
-          mm: safeString(row[2]) || 'NOV',
-          year: safeNumber(row[3]),
-          minute: safeNumber(row[4]),
-          second: safeNumber(row[5]),
-          hr: safeNumber(row[6]),
-          latitude: safeNumber(row[7]),
-          longitude: safeNumber(row[8]),
-          h: safeNumber(row[9]),
-          mb: safeNumber(row[10]),
-          ml: safeNumber(row[11]),
-          az: safeNumber(row[12]),
-          location: safeString(row[13]),
-          nearest_location: safeString(row[14])
+          day: safeNumber(row[0]),
+          mm: safeString(row[1]) || 'NOV',
+          year: safeNumber(row[2]),
+          minute: safeNumber(row[3]),
+          second: safeNumber(row[4]),
+          hr: safeNumber(row[5]),
+          latitude: safeNumber(row[6]),
+          longitude: safeNumber(row[7]),
+          h: safeNumber(row[8]),
+          mb: safeNumber(row[9]),
+          ml: safeNumber(row[10]),
+          az: safeNumber(row[11]),
+          location: safeString(row[12]),
+          nearest_location: safeString(row[13])
         };
+      }).filter((cleanedRow, index) => {
+        // Skip completely empty rows
+        if (Object.values(cleanedRow).every(value => value === null || value === undefined)) {
+          console.warn(`Skipping row ${index + 2} because it is completely empty`);
+          return false;
+        }
+        // Validate required fields after cleaning (mb and ml are optional, so don't check isFinite if null)
+        if (
+          cleanedRow.day === null || cleanedRow.year === null || cleanedRow.minute === null ||
+          cleanedRow.second === null || cleanedRow.hr === null || cleanedRow.latitude === null ||
+          cleanedRow.longitude === null || !isFinite(cleanedRow.h) || cleanedRow.az === null ||
+          !cleanedRow.location || !cleanedRow.nearest_location
+        ) {
+          console.warn(`Skipping row ${index + 2} with missing or invalid fields after cleaning:`, cleanedRow);
+          return false;
+        }
+        // For optional mb/ml, allow null but log if non-finite when present
+        if (cleanedRow.mb !== null && !isFinite(cleanedRow.mb)) {
+          console.warn(`Skipping row ${index + 2} due to invalid mb after cleaning:`, cleanedRow);
+          return false;
+        }
+        return true;
       });
 
       console.log('Mapped Excel rows:', mappedRows);
@@ -939,6 +1036,12 @@ app.get('/download-excel', async (req, res) => {
   } catch (err) {
     console.error('Error processing uploaded file:', err.stack);
     res.status(500).send('Error processing file: ' + err.message);
+  } finally {
+    try {
+      await fs.unlink(filePath);
+    } catch (unlinkErr) {
+      console.warn('Failed to delete uploaded file:', unlinkErr);
+    }
   }
 });
 
@@ -957,11 +1060,7 @@ async function insertRows(rows, req, res) {
       } = row;
 
       // Validate required fields (mm is now optional)
-      if (!id || id === '' || id === null || id === undefined || !isFinite(id)) {
-        console.warn(`Skipping row with missing or invalid id:`, row);
-        skippedCount++;
-        continue;
-      }
+    
       if (
         !day || !year || !minute || !second || !hr ||
         !latitude || !longitude || !isFinite(h) || !isFinite(mb) || !az ||

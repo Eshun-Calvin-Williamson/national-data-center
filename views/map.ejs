@@ -105,14 +105,17 @@
     const day = urlParams.get('day') || 'N/A';
     const az = urlParams.get('az') || 'N/A';
     const location = urlParams.get('location') || 'Unknown';
+    const zoom = parseInt(urlParams.get('zoom')) || 30;  // default 30
     console.log('URL Parameters:', Object.fromEntries(urlParams));
 
     let marker;
     let eventMarkers = L.layerGroup().addTo(map);
 
+
+    
     if (!isNaN(lat) && !isNaN(lng)) {
       const latLng = [lat, lng];
-      map.setView(latLng, 20);
+      map.setView(latLng, zoom);
       marker = L.marker(latLng).addTo(map);
       document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: Fetching...`;
       L.Control.Geocoder.nominatim().reverse(
@@ -160,7 +163,7 @@
     map.on('click', function(e) {
       const { lat, lng } = e.latlng;
       const selectedYear = document.getElementById('yearFilter').value;
-      map.setView([lat, lng], 12); //zoom to click Location at zoom level 10
+      map.setView([lat, lng], 12); //zoom
       document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Location: Fetching...`;
       if (marker) {
         marker.setLatLng(e.latlng);
@@ -226,7 +229,7 @@
             );
              // Add click event to zoom to the marker's location
             eventMarker.on('click', function() {
-              map.setView([lat, lng], 5); // Zoom to level 10 when marker is clicked
+              map.setView([lat, lng], 10); // Zoom to level 10 when marker is clicked
               eventMarker.openPopup();
             });
           } else {
@@ -240,12 +243,12 @@
         const validEvents = filteredEvents.filter(event => event.latitude && event.longitude && !isNaN(parseFloat(event.latitude)) && !isNaN(parseFloat(event.longitude)));
         if (validEvents.length > 0) {
           const bounds = L.latLngBounds(validEvents.map(event => [parseFloat(event.latitude), parseFloat(event.longitude)]));
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
         } else {
-          map.setView([0, 0], 2);
+          map.setView([0, 0], 5.5);
         }
       } else {
-        map.setView([0, 0], 2);
+        map.setView([0, 0], 5.5);
       }
     }
 

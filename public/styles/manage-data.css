@@ -1,0 +1,181 @@
+
+/* manage-data.ejs */
+.manage-data{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40%;
+  height: 80px;
+  
+}
+.manage-data >input{
+  width: 100px;
+  height: 40px;
+  text-align: center;
+  font-style: italic;
+  font-weight: bold;
+  border:1px solid  #007bff4b ;
+  border-radius: 12px;
+}
+
+.manage-data >button{
+  width: 100px;
+  height: 40px;
+  margin-left: 14px;
+  border: 1px solid #007bff4b;
+  border-radius: 12px;
+  background-color: #007bff;
+  font-size: large;
+}
+
+.manage-data >button:hover{
+  background-color: lightblue;
+  cursor: pointer;
+  }
+
+  .delete-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .delete-btn:hover {
+    background-color: #c0392b;
+  }
+
+
+  .atv-tb {
+    max-height: 65vh; 
+    overflow-y: auto;  
+    margin: 20px;
+    border: 1px solid #ccc;
+  }
+  
+  #atv >h2{
+    display: flex;
+    justify-content: center;
+    font-size: xx-large;
+    color: hsl(240, 92%, 30%);
+    text-transform: uppercase;
+  }
+  .atv-tb table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .atv-tb th, .atv-tb td {
+    padding: 10px;
+    border: 1px solid #ddd;
+  }
+  
+  .atv-tb thead {
+    position: sticky;
+    top: 0;
+    background: #007bff;
+    color: white;
+  }
+
+
+  .input-data{
+    width: 50%;
+    color: #00ff6a;
+  }
+
+  .form-select{
+    width: 70px;
+    height: 25px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    color:#0056b3;
+    border-radius: 10px;
+    box-sizing: content-box;
+  }
+
+  .form-control{
+    width:70px;
+    height: 25px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    border-radius: 10px;
+    box-sizing: content-box;
+    background-color: hsl(210, 67%, 96%);
+  }
+
+  .primary{
+    width:70px;
+    height: 36px;
+    text-align: center;
+    font-size: large;
+    font-weight: bold;
+    border-radius: 10px;
+    box-sizing: content-box;
+    background-color: hsl(211, 88%, 61%);
+  }
+  
+  .primary:hover{
+    cursor: pointer;
+    background-color: hsl(199, 90%, 21%);
+  }
+
+  /* upload css */
+
+  .upload-form {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .upload-form input[type="file"] {
+    padding: 2px;
+  }
+  
+  .upload-form button {
+    padding: 8px 4px;
+    background-color: #00ff6a;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+
+  @media (max-width: 1024px) {
+    .dh-menu {
+      width: 180px;
+      padding-top: 50px;
+    }
+  
+    .menu-links a {
+      font-size: 14px;
+      padding: 10px 15px;
+    }
+  
+    .dh-nav-content {
+      margin-left: 180px;
+    }
+  
+    .event-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin-bottom: 20rem;
+    }
+  
+    .dh-nav-content .dh-content {
+      margin: 10rem 6rem;
+    }
+  
+    .user {
+      width: 40vw;
+    }
+  
+    .user > img {
+      width: 200px;
+      height: 200px;
+    }
+  }
